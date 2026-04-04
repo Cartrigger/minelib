@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="io.minelib.MineLibTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-04-04T04:01:14" hostname="runnervm727z3" time="0.201">
+  <properties/>
+  <testcase name="buildsWithCustomGameDirectory()" classname="io.minelib.MineLibTest" time="0.187"/>
+  <testcase name="throwsWhenMaxConcurrentDownloadsIsZero()" classname="io.minelib.MineLibTest" time="0.002"/>
+  <testcase name="acceptsPositiveConcurrentDownloads()" classname="io.minelib.MineLibTest" time="0.004"/>
+  <testcase name="throwsWhenMaxConcurrentDownloadsIsNegative()" classname="io.minelib.MineLibTest" time="0.002"/>
+  <testcase name="buildsWithDefaultGameDirectory()" classname="io.minelib.MineLibTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[[Test worker] INFO io.minelib.MineLib - MineLib initialized with game directory: /tmp/junit11404256134373431683
+[Test worker] INFO io.minelib.MineLib - MineLib initialized with game directory: /tmp/junit10860473728499457033
+[Test worker] INFO io.minelib.MineLib - MineLib initialized with game directory: /home/runner/.minecraft
+]]></system-err>
+</testsuite>

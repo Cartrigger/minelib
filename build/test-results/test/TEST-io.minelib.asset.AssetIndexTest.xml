@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="io.minelib.asset.AssetIndexTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-04-04T04:01:13" hostname="runnervm727z3" time="0.054">
+  <properties/>
+  <testcase name="emptyObjectsMapDoesNotThrow()" classname="io.minelib.asset.AssetIndexTest" time="0.043"/>
+  <testcase name="assetObjectRelativePathIsCorrect()" classname="io.minelib.asset.AssetIndexTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

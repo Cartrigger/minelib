@@ -1,0 +1,94 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = project.property('group')
+version = project.property('version')
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withJavadocJar()
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+def lwjglNatives = {
+    def name = System.getProperty('os.name')
+    if (name.startsWith('Windows')) {
+        def arch = System.getProperty('os.arch')
+        arch.contains('64') && !arch.startsWith('aarch') ? 'natives-windows' : 'natives-windows-x86'
+    } else if (name.startsWith('Linux')) {
+        def arch = System.getProperty('os.arch')
+        if (arch.startsWith('arm') || arch.startsWith('aarch')) {
+            arch.contains('64') || arch.startsWith('aarch') ? 'natives-linux-arm64' : 'natives-linux-arm32'
+        } else {
+            'natives-linux'
+        }
+    } else if (name.startsWith('Mac')) {
+        def arch = System.getProperty('os.arch')
+        arch.startsWith('aarch') ? 'natives-macos-arm64' : 'natives-macos'
+    } else {
+        throw new GradleException("Unsupported operating system: $name")
+    }
+}()
+
+dependencies {
+    // JSON parsing
+    api "com.google.code.gson:gson:${gsonVersion}"
+
+    // HTTP client
+    api "com.squareup.okhttp3:okhttp:${okhttpVersion}"
+
+    // Logging
+    api "org.slf4j:slf4j-api:${slf4jVersion}"
+
+    // LWJGL core
+    api platform("org.lwjgl:lwjgl-bom:${lwjglVersion}")
+    api 'org.lwjgl:lwjgl'
+    api 'org.lwjgl:lwjgl-glfw'
+    api 'org.lwjgl:lwjgl-opengl'
+    api 'org.lwjgl:lwjgl-openal'
+    api 'org.lwjgl:lwjgl-stb'
+
+    // LWJGL natives (bundled for convenience)
+    runtimeOnly "org.lwjgl:lwjgl::${lwjglNatives}"
+    runtimeOnly "org.lwjgl:lwjgl-glfw::${lwjglNatives}"
+    runtimeOnly "org.lwjgl:lwjgl-opengl::${lwjglNatives}"
+    runtimeOnly "org.lwjgl:lwjgl-openal::${lwjglNatives}"
+    runtimeOnly "org.lwjgl:lwjgl-stb::${lwjglNatives}"
+
+    // Testing
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            pom {
+                name = 'minelib'
+                description = 'A core library for launching Minecraft: Java Edition'
+                url = 'https://github.com/Cartrigger/minelib'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+            }
+        }
+    }
+}
