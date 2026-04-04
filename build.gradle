@@ -47,20 +47,28 @@ dependencies {
     // Logging
     api "org.slf4j:slf4j-api:${slf4jVersion}"
 
-    // LWJGL core
-    api platform("org.lwjgl:lwjgl-bom:${lwjglVersion}")
-    api 'org.lwjgl:lwjgl'
-    api 'org.lwjgl:lwjgl-glfw'
-    api 'org.lwjgl:lwjgl-opengl'
-    api 'org.lwjgl:lwjgl-openal'
-    api 'org.lwjgl:lwjgl-stb'
+    // LWJGL core — compileOnly so consuming projects on Android can exclude it and
+    // substitute their own OpenGL ES bridge (e.g. MobileGlues via AndroidGameRunner).
+    // Desktop projects should re-declare these as 'implementation' or 'runtimeOnly'.
+    compileOnly platform("org.lwjgl:lwjgl-bom:${lwjglVersion}")
+    compileOnly 'org.lwjgl:lwjgl'
+    compileOnly 'org.lwjgl:lwjgl-glfw'
+    compileOnly 'org.lwjgl:lwjgl-opengl'
+    compileOnly 'org.lwjgl:lwjgl-openal'
+    compileOnly 'org.lwjgl:lwjgl-stb'
 
-    // LWJGL natives (bundled for convenience)
-    runtimeOnly "org.lwjgl:lwjgl::${lwjglNatives}"
-    runtimeOnly "org.lwjgl:lwjgl-glfw::${lwjglNatives}"
-    runtimeOnly "org.lwjgl:lwjgl-opengl::${lwjglNatives}"
-    runtimeOnly "org.lwjgl:lwjgl-openal::${lwjglNatives}"
-    runtimeOnly "org.lwjgl:lwjgl-stb::${lwjglNatives}"
+    // LWJGL on the test classpath (core + platform-native JARs for desktop CI)
+    testRuntimeOnly platform("org.lwjgl:lwjgl-bom:${lwjglVersion}")
+    testRuntimeOnly 'org.lwjgl:lwjgl'
+    testRuntimeOnly 'org.lwjgl:lwjgl-glfw'
+    testRuntimeOnly 'org.lwjgl:lwjgl-opengl'
+    testRuntimeOnly 'org.lwjgl:lwjgl-openal'
+    testRuntimeOnly 'org.lwjgl:lwjgl-stb'
+    testRuntimeOnly "org.lwjgl:lwjgl::${lwjglNatives}"
+    testRuntimeOnly "org.lwjgl:lwjgl-glfw::${lwjglNatives}"
+    testRuntimeOnly "org.lwjgl:lwjgl-opengl::${lwjglNatives}"
+    testRuntimeOnly "org.lwjgl:lwjgl-openal::${lwjglNatives}"
+    testRuntimeOnly "org.lwjgl:lwjgl-stb::${lwjglNatives}"
 
     // Testing
     testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"

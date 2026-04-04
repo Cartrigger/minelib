@@ -52,6 +52,14 @@ public final class DownloadManager implements AutoCloseable {
     }
 
     /**
+     * Returns the underlying {@link OkHttpClient} for making ad-hoc HTTP requests
+     * (e.g. querying metadata APIs in mod loader installers).
+     */
+    public OkHttpClient getHttpClient() {
+        return httpClient;
+    }
+
+    /**
      * Downloads a single file, blocking the calling thread until it completes.
      *
      * @param task the download task
@@ -90,7 +98,14 @@ public final class DownloadManager implements AutoCloseable {
                 verifySha1(tempFile, task.getSha1(), task.getUrl().toString());
             }
 
-            Files.move(tempFile, destination, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            // Prefer an atomic move; fall back on file-systems that don't support it
+            // (e.g. Android's /data partition).
+            try {
+                Files.move(tempFile, destination,
+                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                Files.move(tempFile, destination, StandardCopyOption.REPLACE_EXISTING);
+            }
             LOGGER.debug("Downloaded: {}", destination);
         } catch (Exception e) {
             Files.deleteIfExists(tempFile);
@@ -174,11 +189,6 @@ public final class DownloadManager implements AutoCloseable {
             }
         }
         return HexFormat.of().formatHex(digest.digest());
-    }
-
-    /** Returns the underlying {@link OkHttpClient} for advanced use-cases. */
-    public OkHttpClient getHttpClient() {
-        return httpClient;
     }
 
     @Override

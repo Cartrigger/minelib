@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="io.minelib.download.DownloadTaskTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-04-04T04:01:14" hostname="runnervm727z3" time="0.009">
+<testsuite name="io.minelib.download.DownloadTaskTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-04-04T04:29:03" hostname="runnervm727z3" time="0.005">
   <properties/>
-  <testcase name="throwsWhenUrlMissing()" classname="io.minelib.download.DownloadTaskTest" time="0.002"/>
-  <testcase name="buildsWithUriUrl()" classname="io.minelib.download.DownloadTaskTest" time="0.002"/>
-  <testcase name="buildsWithAllFields()" classname="io.minelib.download.DownloadTaskTest" time="0.001"/>
-  <testcase name="throwsWhenDestinationMissing()" classname="io.minelib.download.DownloadTaskTest" time="0.0"/>
+  <testcase name="throwsWhenUrlMissing()" classname="io.minelib.download.DownloadTaskTest" time="0.001"/>
+  <testcase name="buildsWithUriUrl()" classname="io.minelib.download.DownloadTaskTest" time="0.0"/>
+  <testcase name="buildsWithAllFields()" classname="io.minelib.download.DownloadTaskTest" time="0.0"/>
+  <testcase name="throwsWhenDestinationMissing()" classname="io.minelib.download.DownloadTaskTest" time="0.001"/>
   <testcase name="toStringContainsUrl()" classname="io.minelib.download.DownloadTaskTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>

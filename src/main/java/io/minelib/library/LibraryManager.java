@@ -93,25 +93,33 @@ public final class LibraryManager {
             }
 
             VersionInfo.LibraryDownloads downloads = library.getDownloads();
-            if (downloads == null) {
-                continue;
-            }
 
-            // Regular (classpath) artifact
-            VersionInfo.Artifact artifact = downloads.getArtifact();
-            if (artifact != null && artifact.getUrl() != null && !artifact.getUrl().isBlank()) {
-                result.add(LibraryInfo.builder()
-                        .name(library.getName())
-                        .path(artifact.getPath())
-                        .sha1(artifact.getSha1())
-                        .size(artifact.getSize())
-                        .url(artifact.getUrl())
-                        .isNative(false)
-                        .build());
+            if (downloads != null && downloads.getArtifact() != null) {
+                // Standard Mojang/Forge format: fully-specified downloads block
+                VersionInfo.Artifact artifact = downloads.getArtifact();
+                if (artifact.getUrl() != null && !artifact.getUrl().isBlank()) {
+                    result.add(LibraryInfo.builder()
+                            .name(library.getName())
+                            .path(artifact.getPath())
+                            .sha1(artifact.getSha1())
+                            .size(artifact.getSize())
+                            .url(artifact.getUrl())
+                            .isNative(false)
+                            .build());
+                }
+            } else if (library.getName() != null && library.getUrl() != null
+                    && !library.getUrl().isBlank()) {
+                // Fabric / NeoForge maven-style format: name + repository base URL only.
+                // Construct the artifact URL from Maven coordinates.
+                LibraryInfo mavenLib = resolveMavenLibrary(library.getName(), library.getUrl());
+                if (mavenLib != null) {
+                    result.add(mavenLib);
+                }
             }
 
             // Native classifier (if any)
-            if (library.getNatives() != null && downloads.getClassifiers() != null) {
+            if (downloads != null && library.getNatives() != null
+                    && downloads.getClassifiers() != null) {
                 String nativeKey = getNativeClassifier(library);
                 if (nativeKey != null) {
                     VersionInfo.Artifact nativeArtifact = downloads.getClassifiers().get(nativeKey);
@@ -154,6 +162,55 @@ public final class LibraryManager {
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Resolves a Maven-style library (name + repository base URL, no {@code downloads}
+     * block) into a {@link LibraryInfo}.
+     *
+     * <p>Given {@code name = "net.fabricmc:fabric-loader:0.16.10"} and
+     * {@code repoUrl = "https://maven.fabricmc.net/"}, this produces:
+     * <ul>
+     *   <li>path: {@code net/fabricmc/fabric-loader/0.16.10/fabric-loader-0.16.10.jar}</li>
+     *   <li>url:  {@code https://maven.fabricmc.net/net/fabricmc/fabric-loader/0.16.10/fabric-loader-0.16.10.jar}</li>
+     * </ul>
+     *
+     * @return the resolved {@link LibraryInfo}, or {@code null} if the name is malformed
+     */
+    private static LibraryInfo resolveMavenLibrary(String name, String repoUrl) {
+        // Maven coordinates: group:artifact:version  (optionally :classifier)
+        String[] parts = name.split(":");
+        if (parts.length < 3) {
+            return null;
+        }
+        String group    = parts[0];
+        String artifact = parts[1];
+        String version  = parts[2];
+        String classifier = parts.length >= 4 ? parts[3] : null;
+
+        String relPath = mavenCoordinatesToPath(group, artifact, version, classifier);
+        String base = repoUrl.endsWith("/") ? repoUrl : repoUrl + "/";
+        String url = base + relPath;
+
+        return LibraryInfo.builder()
+                .name(name)
+                .path(relPath)
+                .url(url)
+                .isNative(false)
+                .build();
+    }
+
+    /**
+     * Converts Maven group/artifact/version coordinates to the standard relative JAR path,
+     * e.g. {@code net/fabricmc/fabric-loader/0.16.10/fabric-loader-0.16.10.jar}.
+     */
+    public static String mavenCoordinatesToPath(String group, String artifact,
+                                                 String version, String classifier) {
+        String groupPath = group.replace('.', '/');
+        String fileName = classifier == null
+                ? artifact + "-" + version + ".jar"
+                : artifact + "-" + version + "-" + classifier + ".jar";
+        return groupPath + "/" + artifact + "/" + version + "/" + fileName;
+    }
 
     /**
      * Evaluates the library's rule list against the current OS and returns {@code true} if

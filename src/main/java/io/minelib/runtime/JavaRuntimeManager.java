@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import io.minelib.download.DownloadManager;
 import io.minelib.download.DownloadTask;
+import io.minelib.platform.Platform;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
@@ -21,9 +22,13 @@ import java.util.Map;
 /**
  * Manages Java runtime provisioning for launching Minecraft.
  *
- * <p>This class can use the JVM that is already present on the host system or download a
- * suitable Adoptium (Eclipse Temurin) JRE from the Adoptium API and install it under
- * {@code <gameDirectory>/runtime/}.
+ * <p>On <strong>desktop</strong> (Windows, macOS, Linux) this class can use the JVM already
+ * present on the host system or download a suitable Adoptium (Eclipse Temurin) JRE from
+ * the Adoptium API and install it under {@code <gameDirectory>/runtime/}.
+ *
+ * <p>On <strong>Android</strong> the ART runtime is always already present in the process,
+ * so {@link #provisionRuntime(int)} returns a {@link JavaRuntime} wrapping the current ART
+ * instance without downloading anything.
  *
  * <p>The {@link #provisionRuntime(int)} method first checks whether a previously
  * installed runtime that satisfies the requested major version is already available under
@@ -76,6 +81,17 @@ public final class JavaRuntimeManager {
      * @throws IOException if a suitable runtime cannot be provisioned
      */
     public JavaRuntime provisionRuntime(int requiredMajorVersion) throws IOException {
+        // On Android the ART runtime is already running inside the launcher process.
+        // We never need to download an external JRE — and doing so would be both pointless
+        // (Temurin binaries are ELF executables, not APKs) and wasteful.
+        if (Platform.isAndroid()) {
+            int currentMajor = Runtime.version().feature();
+            String vendor = System.getProperty("java.vendor", "Android Runtime");
+            Path javaHome = Path.of(System.getProperty("java.home", "/system"));
+            LOGGER.debug("Android detected — using current ART runtime (Java {})", currentMajor);
+            return new JavaRuntime(currentMajor, vendor, javaHome);
+        }
+
         // 1. Check current JVM
         int currentMajor = Runtime.version().feature();
         if (currentMajor >= requiredMajorVersion) {
@@ -177,6 +193,7 @@ public final class JavaRuntimeManager {
 
     /** Extracts a zip archive, stripping the first path component from every entry. */
     private void extractZip(Path archive, Path targetDir) throws IOException {
+        Path canonicalTarget = targetDir.toAbsolutePath().normalize();
         try (var zis = new java.util.zip.ZipInputStream(Files.newInputStream(archive))) {
             java.util.zip.ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
@@ -192,8 +209,8 @@ public final class JavaRuntimeManager {
                     zis.closeEntry();
                     continue;
                 }
-                Path dest = targetDir.resolve(relative);
-                if (!dest.startsWith(targetDir)) {
+                Path dest = canonicalTarget.resolve(relative).normalize();
+                if (!dest.startsWith(canonicalTarget)) {
                     throw new IOException("Zip entry escapes target directory: " + entryName);
                 }
                 if (entry.isDirectory()) {
@@ -219,9 +236,8 @@ public final class JavaRuntimeManager {
     }
 
     private static String detectAdoptiumOs() {
-        String raw = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-        if (raw.contains("win")) return "windows";
-        if (raw.contains("mac") || raw.contains("darwin")) return "mac";
+        if (Platform.isWindows()) return "windows";
+        if (Platform.isMac()) return "mac";
         return "linux";
     }
 

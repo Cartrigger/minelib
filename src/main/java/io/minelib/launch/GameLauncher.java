@@ -1,54 +1,61 @@
 package io.minelib.launch;
 
 import io.minelib.library.LibraryManager;
-import io.minelib.runtime.JavaRuntimeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Launches Minecraft: Java Edition as an OS-level child process.
+ * Launches Minecraft: Java Edition using a pluggable {@link GameRunner}.
  *
  * <p>The launcher:
  * <ol>
  *   <li>Builds the full argument list via {@link LaunchArguments}.</li>
  *   <li>Ensures the natives directory exists.</li>
- *   <li>Starts the game process via {@link ProcessBuilder}.</li>
+ *   <li>Delegates the actual process / thread start to the {@link GameRunner}.</li>
  * </ol>
  *
- * <p>The returned {@link Process} can be monitored or waited on by the calling application.
- * Standard output and standard error are inherited from the parent process by default so
- * that game logs are visible in the launcher's console.
+ * <p>On <strong>desktop</strong> the default runner is {@link SubprocessGameRunner}, which
+ * spawns Minecraft as an OS child process. On <strong>Android</strong> callers must supply
+ * a custom {@link GameRunner} that loads Minecraft in-process via a custom
+ * {@link ClassLoader} (as PojavLauncher does) and wraps the result with
+ * {@link GameProcess#ofThread(Thread)}.
  */
 public final class GameLauncher {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GameLauncher.class);
 
     private final LibraryManager libraryManager;
-    private final JavaRuntimeManager javaRuntimeManager;
+    private final GameRunner gameRunner;
 
-    public GameLauncher(LibraryManager libraryManager, JavaRuntimeManager javaRuntimeManager) {
+    /**
+     * Creates a new {@code GameLauncher}.
+     *
+     * @param libraryManager the library manager used to build the classpath
+     * @param gameRunner     the runner responsible for starting the game process or thread
+     */
+    public GameLauncher(LibraryManager libraryManager, GameRunner gameRunner) {
         this.libraryManager = libraryManager;
-        this.javaRuntimeManager = javaRuntimeManager;
+        this.gameRunner = gameRunner;
     }
 
     /**
-     * Launches Minecraft with the given configuration.
+     * Launches Minecraft with the given configuration and returns a handle to the running
+     * instance.
      *
      * @param config the launch configuration
-     * @return the running game {@link Process}
-     * @throws IOException if the process cannot be started
+     * @return a {@link GameProcess} representing the running game
+     * @throws IOException if the game cannot be started
      */
-    public Process launch(LaunchConfig config) throws IOException {
+    public GameProcess launch(LaunchConfig config) throws IOException {
         LaunchArguments launchArguments = new LaunchArguments(config, libraryManager);
         List<String> args = launchArguments.build();
 
-        // Ensure the natives directory exists
+        // Ensure the natives directory exists (no-op if already present)
         Files.createDirectories(config.getNativesDirectory());
 
         // Build the full command: java executable + all arguments
@@ -60,10 +67,6 @@ public final class GameLauncher {
                 config.getVersion().getId(), config.getJavaRuntime().getMajorVersion());
         LOGGER.debug("Launch command: {}", command);
 
-        ProcessBuilder pb = new ProcessBuilder(command);
-        pb.directory(config.getGameDirectory().toFile());
-        pb.inheritIO();
-
-        return pb.start();
+        return gameRunner.run(command, config.getGameDirectory());
     }
 }

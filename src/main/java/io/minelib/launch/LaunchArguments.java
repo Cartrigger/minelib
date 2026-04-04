@@ -3,6 +3,7 @@ package io.minelib.launch;
 import io.minelib.auth.AuthException;
 import io.minelib.auth.PlayerProfile;
 import io.minelib.library.LibraryManager;
+import io.minelib.platform.Platform;
 import io.minelib.version.VersionInfo;
 
 import java.nio.file.Path;
@@ -65,17 +66,23 @@ public final class LaunchArguments {
     public List<String> build() {
         List<String> args = new ArrayList<>();
 
-        // JVM memory settings
+        // JVM memory settings — only meaningful when launching a subprocess (desktop).
+        // On Android the game runs in-process under ART and these flags are no-ops, but
+        // AndroidGameRunner filters them out before invoking the main class.
         args.add("-Xms" + config.getMinMemoryMb() + "m");
         args.add("-Xmx" + config.getMaxMemoryMb() + "m");
 
-        // Natives path
-        args.add("-Djava.library.path=" + config.getNativesDirectory().toAbsolutePath());
+        if (!Platform.isAndroid()) {
+            // Native library search path — ART on Android does not use this property;
+            // MobileGluesDriver sets the correct path via org.lwjgl.opengl.libname instead.
+            args.add("-Djava.library.path=" + config.getNativesDirectory().toAbsolutePath());
 
-        // LWJGL / OpenGL-related JVM flags recommended for modern Minecraft
-        args.add("-Dorg.lwjgl.util.Debug=false");
-        args.add("-Dorg.lwjgl.system.SharedLibraryExtractPath="
-                + config.getNativesDirectory().toAbsolutePath());
+            // LWJGL desktop flags — not applicable on Android where LWJGL is replaced by
+            // MobileGlues / an OpenGL ES bridge loaded by AndroidGameRunner.
+            args.add("-Dorg.lwjgl.util.Debug=false");
+            args.add("-Dorg.lwjgl.system.SharedLibraryExtractPath="
+                    + config.getNativesDirectory().toAbsolutePath());
+        }
 
         // Structured JVM arguments (1.13+)
         VersionInfo.Arguments structured = config.getVersion().getArguments();

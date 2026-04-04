@@ -16,6 +16,7 @@ import java.util.Map;
 public final class VersionInfo {
 
     private String id;
+    private String inheritsFrom;
     private String type;
     private String mainClass;
     private String minecraftArguments;
@@ -29,6 +30,15 @@ public final class VersionInfo {
     /** Returns the version identifier (e.g. {@code "1.21"}). */
     public String getId() {
         return id;
+    }
+
+    /**
+     * Returns the version ID that this profile inherits from, or {@code null} for standalone
+     * (vanilla) profiles. Fabric, Forge, and NeoForge profiles set this to the base
+     * Minecraft version (e.g. {@code "1.21.4"}).
+     */
+    public String getInheritsFrom() {
+        return inheritsFrom;
     }
 
     /** Returns the release type: {@code "release"}, {@code "snapshot"}, etc. */
@@ -116,11 +126,19 @@ public final class VersionInfo {
         private LibraryDownloads downloads;
         private List<Rule> rules;
         private Natives natives;
+        /**
+         * Base Maven repository URL used when the library does not include a full
+         * {@link LibraryDownloads} block. Fabric and Forge profiles use this format.
+         * The download URL is constructed as:
+         * {@code <url><group/artifact/version/artifact-version.jar>}.
+         */
+        private String url;
 
         public String getName() { return name; }
         public LibraryDownloads getDownloads() { return downloads; }
         public List<Rule> getRules() { return rules; }
         public Natives getNatives() { return natives; }
+        public String getUrl() { return url; }
     }
 
     /** Download descriptors for a library (artifact + optional classifiers). */

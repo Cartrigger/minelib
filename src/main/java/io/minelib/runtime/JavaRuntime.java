@@ -22,7 +22,7 @@ public final class JavaRuntime {
         return majorVersion;
     }
 
-    /** Returns the JVM vendor name (e.g. {@code "Eclipse Adoptium"}). */
+    /** Returns the JVM vendor name (e.g. {@code "Eclipse Temurin"}). */
     public String getVendor() {
         return vendor;
     }
