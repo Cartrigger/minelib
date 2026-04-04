@@ -33,13 +33,13 @@ import java.util.Map;
  *       and returns a {@link GameProcess#ofThread(Thread)} handle.</li>
  * </ol>
  *
- * <h3>ClassLoader note</h3>
+ * <h2>ClassLoader note</h2>
  * <p>{@link URLClassLoader} works in JVM-based Android environments such as the one
  * provided by PojavLauncher.  On stock ART without a modified JVM, Java bytecode cannot
  * be loaded directly — in that case, supply a subclass that overrides
  * {@link #createClassLoader(List)} to use a DEX-aware loader.
  *
- * <h3>Example (Android Activity)</h3>
+ * <h2>Example (Android Activity)</h2>
  * <pre>{@code
  * MobileGluesConfig mglConfig = MobileGluesConfig.builder()
  *     .installDirectory(getFilesDir().toPath().resolve("mobileglues"))

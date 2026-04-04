@@ -21,13 +21,13 @@ import java.util.List;
  * Installs <a href="https://minecraftforge.net/">Forge</a> (MinecraftForge) by downloading
  * and running the official installer JAR.
  *
- * <h3>Version discovery</h3>
+ * <h2>Version discovery</h2>
  * <p>Available versions are fetched from the Forge promotions JSON at
  * {@code https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json}.
  * Full release lists for a given Minecraft version are fetched from the Maven metadata at
  * {@code https://files.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml}.
  *
- * <h3>Installation</h3>
+ * <h2>Installation</h2>
  * <p>The installer JAR is downloaded from Forge's Maven repository and run with
  * {@code --installClient <gameDirectory>}.  The resulting version profile is then parsed
  * and returned.

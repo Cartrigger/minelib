@@ -11,6 +11,8 @@ import io.minelib.launch.SubprocessGameRunner;
 import io.minelib.library.LibraryManager;
 import io.minelib.modloader.ModLoader;
 import io.minelib.modloader.ModLoaderInstaller;
+import io.minelib.modrinth.ModManager;
+import io.minelib.modrinth.ModrinthModManager;
 import io.minelib.runtime.JavaRuntimeManager;
 import io.minelib.version.VersionManager;
 import org.slf4j.Logger;
@@ -48,6 +50,7 @@ public class MineLib {
     private final LibraryManager libraryManager;
     private final JavaRuntimeManager javaRuntimeManager;
     private final GameLauncher gameLauncher;
+    private final ModrinthModManager modrinthModManager;
 
     private MineLib(Builder builder) {
         this.gameDirectory = builder.gameDirectory;
@@ -57,6 +60,7 @@ public class MineLib {
         this.libraryManager = new LibraryManager(gameDirectory, downloadManager);
         this.javaRuntimeManager = new JavaRuntimeManager(gameDirectory, downloadManager);
         this.gameLauncher = new GameLauncher(libraryManager, builder.gameRunner);
+        this.modrinthModManager = new ModrinthModManager(downloadManager);
         LOGGER.info("MineLib initialized with game directory: {}", gameDirectory);
     }
 
@@ -93,6 +97,18 @@ public class MineLib {
     /** Returns the game launcher used to start Minecraft. */
     public GameLauncher getLauncher() {
         return gameLauncher;
+    }
+
+    /**
+     * Returns a {@link ModManager} backed by Modrinth for querying and installing mods.
+     *
+     * <pre>{@code
+     * minelib.getModrinthModManager()
+     *        .installMod("sodium", "1.21.4", "fabric", modsDir);
+     * }</pre>
+     */
+    public ModManager getModrinthModManager() {
+        return modrinthModManager;
     }
 
     /**

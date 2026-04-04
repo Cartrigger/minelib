@@ -18,14 +18,14 @@ import java.util.List;
  * Installs <a href="https://neoforged.net/">NeoForge</a> by downloading and running the
  * official installer JAR from the NeoForged Maven repository.
  *
- * <h3>Version discovery</h3>
+ * <h2>Version discovery</h2>
  * <p>Available versions are fetched from Maven metadata at
  * {@code https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml}.
  * For Minecraft 1.20.1 and earlier, NeoForge used the legacy {@code "forge"} group/artifact
  * under {@code net.neoforged.forge}; from 1.20.2 onwards it moved to
  * {@code net.neoforged:neoforge}. This installer handles only the modern groupId.
  *
- * <h3>Installation</h3>
+ * <h2>Installation</h2>
  * <p>The installer JAR is downloaded and run with {@code --installClient <gameDirectory>}.
  */
 final class NeoForgeInstaller extends InstallerJarBasedInstaller {
