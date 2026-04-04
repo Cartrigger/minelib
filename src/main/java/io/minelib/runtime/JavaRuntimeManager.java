@@ -149,6 +149,7 @@ public final class JavaRuntimeManager {
         downloadManager.download(DownloadTask.builder()
                 .url(downloadUrl)
                 .destination(archivePath)
+                .sha256(sha256)
                 .size(size)
                 .build());
 

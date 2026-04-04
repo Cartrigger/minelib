@@ -22,8 +22,25 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Build and test
+      - name: Build (JAR + Android AAR + tests)
         run: ./gradlew build test --no-daemon
+
+      # Verify the Android AAR was produced — no Android SDK required because
+      # androidAar is a pure-Java Zip task (classes.jar + AndroidManifest.xml).
+      - name: Verify Android AAR exists
+        run: |
+          aar=$(ls build/libs/minelib-*-android.aar 2>/dev/null | head -1)
+          if [ -z "$aar" ]; then
+            echo "ERROR: Android AAR was not produced by the build"
+            exit 1
+          fi
+          echo "Android AAR: $aar ($(du -h "$aar" | cut -f1))"
+
+      - name: Upload Android AAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aar
+          path: build/libs/minelib-*-android.aar
 
       - name: Upload test results
         if: always()

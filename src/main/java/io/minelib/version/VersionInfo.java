@@ -23,7 +23,7 @@ public final class VersionInfo {
     private Arguments arguments;
     private AssetIndex assetIndex;
     private String assets;
-    private int javaVersion;
+    private JavaVersionSpec javaVersion;
     private List<Library> libraries;
     private Downloads downloads;
 
@@ -76,9 +76,22 @@ public final class VersionInfo {
 
     /**
      * Returns the major Java version required to run this version of Minecraft
-     * (e.g. {@code 17} for 1.18+).
+     * (e.g. {@code 21} for 1.21+, {@code 17} for 1.18–1.20).
+     *
+     * <p>Mojang's version JSON encodes this as a nested object:
+     * {@code "javaVersion": {"component": "java-runtime-gamma", "majorVersion": 21}}.
+     * Returns {@code 8} as a safe fallback when the field is absent (pre-1.7.10 versions
+     * that pre-date the structured format).
      */
     public int getJavaVersion() {
+        return javaVersion != null ? javaVersion.getMajorVersion() : 8;
+    }
+
+    /**
+     * Returns the raw {@link JavaVersionSpec} object from the version JSON, or {@code null}
+     * for very old versions that pre-date the field.
+     */
+    public JavaVersionSpec getJavaVersionSpec() {
         return javaVersion;
     }
 
@@ -95,6 +108,35 @@ public final class VersionInfo {
     // -------------------------------------------------------------------------
     // Nested types
     // -------------------------------------------------------------------------
+
+    /**
+     * The {@code javaVersion} object in a Minecraft version JSON descriptor.
+     *
+     * <p>Example JSON:
+     * <pre>{@code
+     * "javaVersion": {
+     *   "component": "java-runtime-gamma",
+     *   "majorVersion": 21
+     * }
+     * }</pre>
+     *
+     * <p>This object was introduced in Minecraft 1.7+ and is present in all modern versions.
+     * Very old versions (pre-1.7.10) omit it entirely; {@link VersionInfo#getJavaVersion()}
+     * returns {@code 8} in that case.
+     */
+    public static final class JavaVersionSpec {
+        private String component;
+        private int majorVersion;
+
+        /** Returns the Mojang component name (e.g. {@code "java-runtime-gamma"}). */
+        public String getComponent() { return component; }
+
+        /**
+         * Returns the required Java major version (e.g. {@code 21} for 1.21+,
+         * {@code 17} for 1.18–1.20, {@code 8} for 1.16 and below).
+         */
+        public int getMajorVersion() { return majorVersion; }
+    }
 
     /** Structured arguments for Minecraft 1.13+ (game and JVM arguments). */
     public static final class Arguments {

@@ -23,7 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Manages concurrent file downloads with optional SHA-1 verification.
+ * Manages concurrent file downloads with optional SHA-1 or SHA-256 verification.
  *
  * <p>All downloads are executed on a fixed-size thread pool whose concurrency is set at
  * construction time. Each file is first written to a temporary path and then atomically moved
@@ -94,8 +94,10 @@ public final class DownloadManager implements AutoCloseable {
                 }
             }
 
-            if (task.getSha1() != null) {
-                verifySha1(tempFile, task.getSha1(), task.getUrl().toString());
+            if (task.getSha256() != null) {
+                verifyHash(tempFile, task.getSha256(), "SHA-256", task.getUrl().toString());
+            } else if (task.getSha1() != null) {
+                verifyHash(tempFile, task.getSha1(), "SHA-1", task.getUrl().toString());
             }
 
             // Prefer an atomic move; fall back on file-systems that don't support it
@@ -150,37 +152,42 @@ public final class DownloadManager implements AutoCloseable {
     }
 
     /**
-     * Checks whether the destination file already exists and (if a SHA-1 is provided) whether its
-     * checksum matches. If both conditions are met the file does not need to be re-downloaded.
+     * Checks whether the destination file already exists and (if a checksum is provided) whether its
+     * digest matches. SHA-256 is preferred over SHA-1 when both are set.
+     * If both conditions are met the file does not need to be re-downloaded.
      */
     private boolean isAlreadyDownloaded(DownloadTask task) {
         Path dest = task.getDestination();
         if (!Files.exists(dest)) {
             return false;
         }
-        if (task.getSha1() == null) {
+        // Prefer SHA-256 check over SHA-1; fall back to "exists" if neither is set
+        String hash = task.getSha256() != null ? task.getSha256() : task.getSha1();
+        String algorithm = task.getSha256() != null ? "SHA-256" : "SHA-1";
+        if (hash == null) {
             return true;
         }
         try {
-            String actual = sha1Hex(dest);
-            return actual.equalsIgnoreCase(task.getSha1());
+            String actual = digestHex(dest, algorithm);
+            return actual.equalsIgnoreCase(hash);
         } catch (IOException | NoSuchAlgorithmException e) {
             LOGGER.warn("Could not verify checksum for {}, will re-download", dest, e);
             return false;
         }
     }
 
-    private void verifySha1(Path file, String expected, String urlHint)
+    private void verifyHash(Path file, String expected, String algorithm, String urlHint)
             throws IOException, NoSuchAlgorithmException {
-        String actual = sha1Hex(file);
+        String actual = digestHex(file, algorithm);
         if (!actual.equalsIgnoreCase(expected)) {
             throw new IOException(
-                    "SHA-1 mismatch for " + urlHint + ": expected " + expected + " but got " + actual);
+                    algorithm + " mismatch for " + urlHint
+                    + ": expected " + expected + " but got " + actual);
         }
     }
 
-    private String sha1Hex(Path file) throws IOException, NoSuchAlgorithmException {
-        MessageDigest digest = MessageDigest.getInstance("SHA-1");
+    private String digestHex(Path file, String algorithm) throws IOException, NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance(algorithm);
         byte[] buf = new byte[BUFFER_SIZE];
         try (InputStream in = Files.newInputStream(file)) {
             int n;

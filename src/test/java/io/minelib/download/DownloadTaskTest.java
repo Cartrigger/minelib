@@ -53,6 +53,43 @@ class DownloadTaskTest {
     }
 
     @Test
+    void buildsWithSha256Field() {
+        DownloadTask task = DownloadTask.builder()
+                .url("https://example.com/jre.tar.gz")
+                .destination(Path.of("/tmp/jre.tar.gz"))
+                .sha256("abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
+                .size(50_000_000L)
+                .build();
+
+        assertNull(task.getSha1());
+        assertEquals("abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                task.getSha256());
+        assertEquals(50_000_000L, task.getSize());
+    }
+
+    @Test
+    void buildsWithBothSha1AndSha256() {
+        DownloadTask task = DownloadTask.builder()
+                .url("https://example.com/file.jar")
+                .destination(Path.of("/tmp/file.jar"))
+                .sha1("aabbccdd")
+                .sha256("eeff0011")
+                .build();
+
+        assertEquals("aabbccdd", task.getSha1());
+        assertEquals("eeff0011", task.getSha256());
+    }
+
+    @Test
+    void sha256IsNullByDefault() {
+        DownloadTask task = DownloadTask.builder()
+                .url("https://example.com/file.jar")
+                .destination(Path.of("/tmp/file.jar"))
+                .build();
+        assertNull(task.getSha256());
+    }
+
+    @Test
     void toStringContainsUrl() {
         DownloadTask task = DownloadTask.builder()
                 .url("https://example.com/file.jar")

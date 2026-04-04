@@ -1,5 +1,6 @@
 package io.minelib;
 
+import io.minelib.modrinth.ModrinthModManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -52,5 +53,12 @@ class MineLibTest {
                         .gameDirectory(tempDir)
                         .maxConcurrentDownloads(8)
                         .build());
+    }
+
+    @Test
+    void exposesModrinthModManager() {
+        MineLib lib = MineLib.builder().gameDirectory(tempDir).build();
+        assertNotNull(lib.getModrinthModManager());
+        assertInstanceOf(ModrinthModManager.class, lib.getModrinthModManager());
     }
 }

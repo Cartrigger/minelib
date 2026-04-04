@@ -4,19 +4,24 @@ import java.net.URI;
 import java.nio.file.Path;
 
 /**
- * Represents a single file download with an optional expected SHA-1 checksum.
+ * Represents a single file download with an optional expected checksum.
+ *
+ * <p>Both SHA-1 (Mojang) and SHA-256 (Adoptium) checksums are supported.
+ * When both are set, SHA-256 is preferred because it is stronger.
  */
 public final class DownloadTask {
 
     private final URI url;
     private final Path destination;
     private final String sha1;
+    private final String sha256;
     private final long size;
 
     private DownloadTask(Builder builder) {
         this.url = builder.url;
         this.destination = builder.destination;
         this.sha1 = builder.sha1;
+        this.sha256 = builder.sha256;
         this.size = builder.size;
     }
 
@@ -32,10 +37,18 @@ public final class DownloadTask {
 
     /**
      * Returns the expected SHA-1 hex digest of the downloaded file, or {@code null} if
-     * verification is not required.
+     * not set.  Used by Mojang's version/library metadata.
      */
     public String getSha1() {
         return sha1;
+    }
+
+    /**
+     * Returns the expected SHA-256 hex digest of the downloaded file, or {@code null} if
+     * not set.  Used by the Adoptium JRE download API.
+     */
+    public String getSha256() {
+        return sha256;
     }
 
     /**
@@ -61,6 +74,7 @@ public final class DownloadTask {
         private URI url;
         private Path destination;
         private String sha1;
+        private String sha256;
         private long size = -1;
 
         private Builder() {}
@@ -100,12 +114,27 @@ public final class DownloadTask {
 
         /**
          * Sets the expected SHA-1 checksum (hex string) for verification.
+         * Used for Mojang library and asset downloads.
          *
-         * @param sha1 the expected SHA-1 digest, or {@code null} to skip verification
+         * @param sha1 the expected SHA-1 digest, or {@code null} to skip SHA-1 verification
          * @return this builder
          */
         public Builder sha1(String sha1) {
             this.sha1 = sha1;
+            return this;
+        }
+
+        /**
+         * Sets the expected SHA-256 checksum (hex string) for verification.
+         * Used for Adoptium JRE archive downloads.
+         * When both SHA-1 and SHA-256 are set, SHA-256 is preferred by
+         * {@link DownloadManager}.
+         *
+         * @param sha256 the expected SHA-256 digest, or {@code null} to skip SHA-256 verification
+         * @return this builder
+         */
+        public Builder sha256(String sha256) {
+            this.sha256 = sha256;
             return this;
         }
 
