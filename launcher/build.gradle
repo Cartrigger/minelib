@@ -24,6 +24,17 @@ def javafxVersion = '21.0.2'
 def javafxModules = ['javafx-base', 'javafx-controls', 'javafx-graphics', 'javafx-fxml']
 def javafxPlatforms = ['linux', 'win', 'mac', 'mac-aarch64']
 
+// The classifier-less javafx-* JARs on Maven Central are empty stubs.
+// The actual bytecode lives only in the platform-specific classifier JARs.
+// Detect the current OS so we put the right JAR on the compile classpath.
+def currentJavafxPlatform = {
+    def os   = System.getProperty('os.name',  '').toLowerCase(Locale.ROOT)
+    def arch = System.getProperty('os.arch',   '').toLowerCase(Locale.ROOT)
+    if (os.contains('win'))  return 'win'
+    if (os.contains('mac'))  return arch.contains('aarch') ? 'mac-aarch64' : 'mac'
+    return 'linux'
+}()
+
 configurations {
     // Separate config so we can pull the right natives without 'transitive' noise
     javafxNatives { transitive = false }
@@ -33,12 +44,13 @@ dependencies {
     // Library under development
     implementation project(':')
 
-    // JavaFX API JARs (platform-neutral)
+    // JavaFX: use the current-platform classifier JAR so the compile classpath
+    // has real bytecode.  The classifier-less JARs on Maven Central are stubs.
     javafxModules.each { mod ->
-        implementation "org.openjfx:${mod}:${javafxVersion}"
+        implementation "org.openjfx:${mod}:${javafxVersion}:${currentJavafxPlatform}"
     }
 
-    // JavaFX native JARs for all supported desktops
+    // JavaFX native JARs for all supported desktops (fat JAR + jpackage input)
     javafxModules.each { mod ->
         javafxPlatforms.each { platform ->
             javafxNatives "org.openjfx:${mod}:${javafxVersion}:${platform}"
@@ -51,10 +63,25 @@ dependencies {
     // Logging
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
     runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+
+    // Testing
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
 }
 
 // Put the native JARs on the runtime classpath so JavaFX can unpack them
 sourceSets.main.runtimeClasspath += configurations.javafxNatives
+
+test {
+    useJUnitPlatform()
+}
+
+// Give the thin launcher JAR a fixed name so the jpackage command in CI is stable.
+tasks.named('jar') {
+    archiveFileName = 'launcher.jar'
+}
 
 // ---------------------------------------------------------------------------
 // Application plugin
@@ -94,6 +121,61 @@ tasks.register('fatJar', Jar) {
 }
 
 tasks.named('assemble') { dependsOn fatJar }
+
+// ---------------------------------------------------------------------------
+// jpackage input directory
+// Copies all runtime JARs *except* JavaFX into build/jpackage-input/.
+// JavaFX is provided by the bundled Liberica JDK Full in native packages,
+// so we intentionally leave it out to avoid class-path/module duplication.
+// ---------------------------------------------------------------------------
+tasks.register('jpackageInput', Copy) {
+    group = 'distribution'
+    description = 'Assembles the jpackage input directory (non-JavaFX runtime JARs + launcher.jar).'
+    dependsOn tasks.named('jar')
+    into layout.buildDirectory.dir('jpackage-input')
+    // All runtime deps except the JavaFX API jars (they come from the JDK)
+    from configurations.runtimeClasspath.filter { File f -> !f.name.startsWith('javafx-') }
+    // The main launcher JAR
+    from tasks.named('jar').map { it.archiveFile }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// ---------------------------------------------------------------------------
+// Convenience Gradle task that wraps the jpackage CLI tool.
+// Run with:  ./gradlew :launcher:jpackageNative
+// Requires a JDK that ships JavaFX (e.g. Liberica JDK Full 21+).
+// ---------------------------------------------------------------------------
+tasks.register('jpackageNative') {
+    group = 'distribution'
+    description = 'Creates a native application package using jpackage. ' +
+                  'Requires Liberica JDK Full (java-package: jdk+fx) or equivalent.'
+    dependsOn tasks.named('jpackageInput')
+
+    doLast {
+        def osName = System.getProperty('os.name', '').toLowerCase(Locale.ROOT)
+        def pkgType = osName.contains('win') ? 'exe'
+                    : osName.contains('mac') ? 'dmg'
+                    : 'deb'
+        def inputDir  = layout.buildDirectory.dir('jpackage-input').get().asFile.absolutePath
+        def outputDir = layout.buildDirectory.dir('native-packages').get().asFile
+        outputDir.mkdirs()
+
+        exec {
+            commandLine(
+                'jpackage',
+                '--input',        inputDir,
+                '--main-jar',     'launcher.jar',
+                '--name',         'MinelibLauncher',
+                '--type',         pkgType,
+                '--add-modules',  'javafx.controls,javafx.graphics,javafx.fxml',
+                '--app-version',  project.version.toString(),
+                '--description',  'Cross-platform Minecraft launcher powered by minelib',
+                '--vendor',       'Minelib',
+                '--dest',         outputDir.absolutePath
+            )
+        }
+    }
+}
 
 // Pass module args to the run task as well
 tasks.named('run') {

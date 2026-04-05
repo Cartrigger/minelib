@@ -65,7 +65,7 @@ public final class InstanceService {
                         if (inst != null && inst.getId() != null) {
                             instances.add(inst);
                         }
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         LOGGER.warn("Could not read instance metadata at {}", meta, e);
                     }
                 }
@@ -155,7 +155,15 @@ public final class InstanceService {
         instance.markPlayed();
         saveInstance(instance);
 
-        return minelib.installAndLaunch(instance.getMinecraftVersion(), profile);
+        return minelib.installAndLaunch(instance.getMinecraftVersion(),
+                new io.minelib.auth.AuthProvider() {
+                    @Override
+                    public PlayerProfile authenticate() { return profile; }
+                    @Override
+                    public PlayerProfile refresh(PlayerProfile p) { return profile; }
+                    @Override
+                    public boolean validate(PlayerProfile p) { return true; }
+                });
     }
 
     // -------------------------------------------------------------------------

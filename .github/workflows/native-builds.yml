@@ -1,0 +1,175 @@
+name: Native Builds
+
+# Produces native launcher packages for every supported platform:
+#   • Linux  → .deb installer
+#   • macOS  → .dmg disk image
+#   • Windows → .exe installer (WiX-based)
+#   • Android → .apk
+#
+# Triggered on version tags (v*) and can also be run manually.
+# On tagged releases all artifacts are attached to the GitHub Release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to upload release assets
+
+jobs:
+  # ─── Desktop native packages ────────────────────────────────────────────────
+  desktop:
+    name: Desktop (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            package-type: deb
+            artifact-name: linux-deb
+
+          - os: macos-latest
+            package-type: dmg
+            artifact-name: macos-dmg
+
+          - os: windows-latest
+            package-type: exe
+            artifact-name: windows-exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Liberica JDK Full bundles JavaFX as proper JDK modules — required for
+      # jpackage to include javafx.controls / javafx.graphics in the bundled JRE.
+      - name: Set up Liberica JDK 21 Full (includes JavaFX)
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: '21'
+          java-package: jdk+fx
+          cache: gradle
+
+      # jpackage --type exe on Windows requires WiX Toolset 3.11+.
+      # windows-latest already has WiX 3.14 installed; we just need it on PATH.
+      - name: Add WiX Toolset to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $wix = Get-ChildItem "C:\Program Files (x86)\WiX Toolset*\bin" `
+                   -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+          if ($wix) {
+            "$wix" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            Write-Host "WiX found at: $wix"
+          } else {
+            Write-Host "WiX not found pre-installed, installing via Chocolatey..."
+            choco install wixtoolset --no-progress -y
+          }
+
+      - name: Install Linux packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y fakeroot
+
+      - name: Build jpackage input directory
+        run: ./gradlew :launcher:jpackageInput --no-daemon
+
+      - name: Create native package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          jpackage \
+            --input     launcher/build/jpackage-input \
+            --main-jar  launcher.jar \
+            --name      MinelibLauncher \
+            --type      deb \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml \
+            --app-version 0.1.0 \
+            --vendor    "Minelib" \
+            --description "Cross-platform Minecraft launcher" \
+            --linux-app-category games \
+            --dest      native-packages
+
+      - name: Create native package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          jpackage \
+            --input     launcher/build/jpackage-input \
+            --main-jar  launcher.jar \
+            --name      MinelibLauncher \
+            --type      dmg \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml \
+            --app-version 0.1.0 \
+            --vendor    "Minelib" \
+            --description "Cross-platform Minecraft launcher" \
+            --dest      native-packages
+
+      - name: Create native package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          jpackage `
+            --input     launcher/build/jpackage-input `
+            --main-jar  launcher.jar `
+            --name      MinelibLauncher `
+            --type      exe `
+            --add-modules "javafx.controls,javafx.graphics,javafx.fxml" `
+            --app-version 0.1.0 `
+            --vendor    "Minelib" `
+            --description "Cross-platform Minecraft launcher" `
+            --win-dir-chooser `
+            --win-menu `
+            --win-shortcut `
+            --dest      native-packages
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: native-packages/
+          retention-days: 30
+
+  # ─── Android APK ────────────────────────────────────────────────────────────
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      # ubuntu-latest has ANDROID_HOME set and the required SDK components
+      # (compileSdk 34, build-tools 34.0.0) pre-installed.
+      - name: Build debug APK
+        run: ./gradlew :launcher-android:assembleDebug -PandroidBuild=true --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: launcher-android/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+  # ─── Attach artifacts to GitHub Release ─────────────────────────────────────
+  release-assets:
+    name: Attach to Release
+    needs: [desktop, android]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Attach artifacts to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: all-artifacts/**/*

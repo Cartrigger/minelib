@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Minelib Launcher</string>
+    <string name="sign_in_subtitle">Connect your account to play Minecraft</string>
+    <string name="sign_in_microsoft">Sign in with Microsoft</string>
+    <string name="waiting_for_code">Starting sign-in…</string>
+    <string name="play_offline">Play Offline</string>
+    <string name="username">Username</string>
+    <string name="username_required">Please enter a username</string>
+    <string name="sign_in_failed">Sign in failed</string>
+    <string name="no_instances">No instances yet.\nTap + to create one.</string>
+    <string name="new_instance">New Instance</string>
+    <string name="instance_name">Instance name</string>
+    <string name="minecraft_version">Minecraft version (e.g. 1.21.4)</string>
+    <string name="mod_loader">Mod loader</string>
+    <string name="create">Create</string>
+    <string name="cancel">Cancel</string>
+    <string name="play">Play</string>
+    <string name="fields_required">Name and version are required</string>
+    <string name="create_failed">Could not create instance</string>
+    <string name="launching">Launching Minecraft…</string>
+    <string name="launch_failed">Launch failed</string>
+
+    <!-- Mod loader spinner entries — order must match Instance.ModLoader enum -->
+    <string-array name="mod_loaders">
+        <item>Vanilla</item>
+        <item>Fabric</item>
+        <item>Forge</item>
+        <item>NeoForge</item>
+    </string-array>
+</resources>

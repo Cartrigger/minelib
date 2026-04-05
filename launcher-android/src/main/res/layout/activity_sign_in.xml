@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center_horizontal">
+
+        <!-- Logo / title -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginTop="56dp"
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sign_in_subtitle"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:layout_marginBottom="40dp" />
+
+        <!-- Microsoft sign-in -->
+        <Button
+            android:id="@+id/btn_sign_in"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sign_in_microsoft"
+            android:backgroundTint="@color/accent"
+            android:textColor="@color/white"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Device-code message shown after clicking sign-in -->
+        <TextView
+            android:id="@+id/tv_code_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/accent"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:fontFamily="monospace"
+            android:padding="12dp"
+            android:background="#1f6feb22"
+            android:layout_marginBottom="24dp"
+            android:visibility="gone" />
+
+        <!-- Divider -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="─── or play offline ───"
+            android:textColor="@color/text_muted"
+            android:textSize="12sp"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Offline username -->
+        <EditText
+            android:id="@+id/et_username"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/username"
+            android:inputType="textPersonName"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_muted"
+            android:backgroundTint="@color/border"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btn_offline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/play_offline"
+            android:backgroundTint="@color/surface_variant"
+            android:textColor="@color/text_primary" />
+
+    </LinearLayout>
+</ScrollView>

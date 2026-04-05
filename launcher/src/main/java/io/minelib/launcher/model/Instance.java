@@ -18,7 +18,7 @@ public final class Instance {
     /** Supported mod loaders. */
     public enum ModLoader { VANILLA, FABRIC, FORGE, NEOFORGE }
 
-    private final String id;
+    private String id;
     private String name;
     private String minecraftVersion;
     private ModLoader modLoader;
