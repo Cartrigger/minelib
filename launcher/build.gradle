@@ -1,0 +1,101 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'io.minelib'
+version = rootProject.version
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+// ---------------------------------------------------------------------------
+// JavaFX: add platform-specific native JARs based on current OS.
+// All three desktop platforms are added so the project compiles on CI (Linux)
+// and distributes on Windows and macOS.
+// ---------------------------------------------------------------------------
+def javafxVersion = '21.0.2'
+def javafxModules = ['javafx-base', 'javafx-controls', 'javafx-graphics', 'javafx-fxml']
+def javafxPlatforms = ['linux', 'win', 'mac', 'mac-aarch64']
+
+configurations {
+    // Separate config so we can pull the right natives without 'transitive' noise
+    javafxNatives { transitive = false }
+}
+
+dependencies {
+    // Library under development
+    implementation project(':')
+
+    // JavaFX API JARs (platform-neutral)
+    javafxModules.each { mod ->
+        implementation "org.openjfx:${mod}:${javafxVersion}"
+    }
+
+    // JavaFX native JARs for all supported desktops
+    javafxModules.each { mod ->
+        javafxPlatforms.each { platform ->
+            javafxNatives "org.openjfx:${mod}:${javafxVersion}:${platform}"
+        }
+    }
+
+    // Gson for instance/auth JSON persistence (library already ships it)
+    implementation "com.google.code.gson:gson:${gsonVersion}"
+
+    // Logging
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+}
+
+// Put the native JARs on the runtime classpath so JavaFX can unpack them
+sourceSets.main.runtimeClasspath += configurations.javafxNatives
+
+// ---------------------------------------------------------------------------
+// Application plugin
+// ---------------------------------------------------------------------------
+application {
+    mainClass = 'io.minelib.launcher.Main'
+    applicationDefaultJvmArgs = [
+        // JavaFX needs to be opened as modules even in unnamed-module mode
+        '--add-modules', 'javafx.controls,javafx.graphics,javafx.fxml',
+        '--add-opens',   'javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED',
+        '--add-exports', 'javafx.graphics/com.sun.glass.ui=ALL-UNNAMED',
+    ]
+}
+
+// ---------------------------------------------------------------------------
+// Shadow (fat) JAR — bundles all dependencies including JavaFX natives
+// ---------------------------------------------------------------------------
+tasks.register('fatJar', Jar) {
+    group = 'build'
+    description = 'Assembles a self-contained JAR with all runtime dependencies.'
+    archiveClassifier = 'all'
+    manifest {
+        attributes(
+            'Main-Class': application.mainClass.get(),
+            'Add-Opens':  'javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED'
+        )
+    }
+    from sourceSets.main.output
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    from {
+        configurations.javafxNatives.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/LICENSE*'
+}
+
+tasks.named('assemble') { dependsOn fatJar }
+
+// Pass module args to the run task as well
+tasks.named('run') {
+    jvmArgs applicationDefaultJvmArgs
+}
