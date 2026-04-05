@@ -102,6 +102,8 @@ application {
 tasks.register('fatJar', Jar) {
     group = 'build'
     description = 'Assembles a self-contained JAR with all runtime dependencies.'
+    // Ensure every project-dependency JAR (e.g. the root :jar) is built first.
+    dependsOn configurations.runtimeClasspath.buildDependencies
     archiveClassifier = 'all'
     manifest {
         attributes(
