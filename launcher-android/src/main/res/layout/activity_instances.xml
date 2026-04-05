@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/surface"
+        android:elevation="4dp"
+        android:layout_alignParentTop="true">
+
+        <!-- Mods shortcut in the top-right of the toolbar -->
+        <Button
+            android:id="@+id/btn_mods"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="@string/mods"
+            android:textSize="13sp"
+            android:backgroundTint="transparent"
+            android:textColor="@color/accent"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp" />
+
+    </androidx.appcompat.widget.Toolbar>
+
+    <!-- Instance list -->
+    <ListView
+        android:id="@+id/list_instances"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/toolbar"
+        android:layout_above="@+id/fab_add"
+        android:divider="@color/border"
+        android:dividerHeight="1dp"
+        android:background="@color/background" />
+
+    <!-- Empty-state label -->
+    <TextView
+        android:id="@+id/tv_empty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="@string/no_instances"
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:visibility="gone" />
+
+    <!-- Floating action button (add instance) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_add"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="16dp"
+        android:src="@android:drawable/ic_input_add"
+        android:contentDescription="@string/new_instance"
+        app:backgroundTint="@color/accent"
+        app:tint="@color/white"
+        xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+</RelativeLayout>

@@ -1,0 +1,19 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'minelib'
+include 'launcher'
+
+// Include the Android launcher only when the 'androidBuild' Gradle property
+// is explicitly set (e.g. ./gradlew … -PandroidBuild=true).
+// This keeps local and restricted-network builds working without the Android SDK
+// or access to Google Maven.  The native-builds.yml workflow passes the flag
+// automatically when building the APK.
+if (settings.hasProperty('androidBuild')) {
+    include 'launcher-android'
+}

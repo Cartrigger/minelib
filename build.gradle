@@ -1,0 +1,184 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = project.property('group')
+version = project.property('version')
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withJavadocJar()
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+def lwjglNatives = {
+    def name = System.getProperty('os.name')
+    if (name.startsWith('Windows')) {
+        def arch = System.getProperty('os.arch')
+        arch.contains('64') && !arch.startsWith('aarch') ? 'natives-windows' : 'natives-windows-x86'
+    } else if (name.startsWith('Linux')) {
+        def arch = System.getProperty('os.arch')
+        if (arch.startsWith('arm') || arch.startsWith('aarch')) {
+            arch.contains('64') || arch.startsWith('aarch') ? 'natives-linux-arm64' : 'natives-linux-arm32'
+        } else {
+            'natives-linux'
+        }
+    } else if (name.startsWith('Mac')) {
+        def arch = System.getProperty('os.arch')
+        arch.startsWith('aarch') ? 'natives-macos-arm64' : 'natives-macos'
+    } else {
+        throw new GradleException("Unsupported operating system: $name")
+    }
+}()
+
+dependencies {
+    // JSON parsing
+    api "com.google.code.gson:gson:${gsonVersion}"
+
+    // HTTP client
+    api "com.squareup.okhttp3:okhttp:${okhttpVersion}"
+
+    // Logging
+    api "org.slf4j:slf4j-api:${slf4jVersion}"
+
+    // LWJGL core — compileOnly so consuming projects on Android can exclude it and
+    // substitute their own OpenGL ES bridge (e.g. MobileGlues via AndroidGameRunner).
+    // Desktop projects should re-declare these as 'implementation' or 'runtimeOnly'.
+    compileOnly platform("org.lwjgl:lwjgl-bom:${lwjglVersion}")
+    compileOnly 'org.lwjgl:lwjgl'
+    compileOnly 'org.lwjgl:lwjgl-glfw'
+    compileOnly 'org.lwjgl:lwjgl-opengl'
+    compileOnly 'org.lwjgl:lwjgl-openal'
+    compileOnly 'org.lwjgl:lwjgl-stb'
+
+    // LWJGL on the test classpath (core + platform-native JARs for desktop CI)
+    testRuntimeOnly platform("org.lwjgl:lwjgl-bom:${lwjglVersion}")
+    testRuntimeOnly 'org.lwjgl:lwjgl'
+    testRuntimeOnly 'org.lwjgl:lwjgl-glfw'
+    testRuntimeOnly 'org.lwjgl:lwjgl-opengl'
+    testRuntimeOnly 'org.lwjgl:lwjgl-openal'
+    testRuntimeOnly 'org.lwjgl:lwjgl-stb'
+    testRuntimeOnly "org.lwjgl:lwjgl::${lwjglNatives}"
+    testRuntimeOnly "org.lwjgl:lwjgl-glfw::${lwjglNatives}"
+    testRuntimeOnly "org.lwjgl:lwjgl-opengl::${lwjglNatives}"
+    testRuntimeOnly "org.lwjgl:lwjgl-openal::${lwjglNatives}"
+    testRuntimeOnly "org.lwjgl:lwjgl-stb::${lwjglNatives}"
+
+    // Testing
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// ---------------------------------------------------------------------------
+// Android AAR
+// A pure-Java library AAR: classes.jar + minimal AndroidManifest.xml.
+// No Android SDK required — the manifest just declares the package name.
+// ---------------------------------------------------------------------------
+def androidManifestFile = layout.buildDirectory.file('android/AndroidManifest.xml')
+
+tasks.register('generateAndroidManifest') {
+    group = 'build'
+    description = 'Generates the minimal AndroidManifest.xml required inside the AAR.'
+    outputs.file(androidManifestFile)
+    doLast {
+        def f = androidManifestFile.get().asFile
+        f.parentFile.mkdirs()
+        f.text = """\
+<?xml version="1.0" encoding="utf-8"?>
+<manifest package="${project.group}" />
+"""
+    }
+}
+
+tasks.register('androidAar', Zip) {
+    group = 'build'
+    description = 'Packages the library as an Android Archive (.aar) for use in Android projects.'
+    dependsOn tasks.named('jar'), tasks.named('generateAndroidManifest')
+    archiveExtension = 'aar'
+    archiveClassifier = 'android'
+    destinationDirectory = layout.buildDirectory.dir('libs')
+    // The main bytecode goes in as classes.jar
+    from(tasks.named('jar').map { it.archiveFile }) { rename { 'classes.jar' } }
+    // Minimal manifest
+    from(androidManifestFile)
+}
+
+tasks.named('assemble') { dependsOn tasks.named('androidAar') }
+
+// ---------------------------------------------------------------------------
+// LWJGL native extraction
+// Downloads the LWJGL native JARs for Linux and Windows, then unzips the
+// native files (.so / .dll) into build/natives/{linux,windows}/ for bundling
+// as release artifacts.  These JARs are fetched from Maven Central regardless
+// of the host OS — no cross-compilation toolchain is needed.
+// ---------------------------------------------------------------------------
+def lwjglNativeLibs = ['lwjgl', 'lwjgl-glfw', 'lwjgl-opengl', 'lwjgl-openal', 'lwjgl-stb']
+
+configurations {
+    // transitive=false: we only want the native JARs themselves, not their POM deps
+    lwjglNativesLinux  { transitive = false }
+    lwjglNativesWindows { transitive = false }
+}
+
+dependencies {
+    // Specify the full version explicitly — platform() doesn't work with transitive=false
+    lwjglNativeLibs.each { lib ->
+        lwjglNativesLinux  "org.lwjgl:${lib}:${lwjglVersion}:natives-linux"
+        lwjglNativesWindows "org.lwjgl:${lib}:${lwjglVersion}:natives-windows"
+    }
+}
+
+tasks.register('extractLinuxNatives', Copy) {
+    group = 'build'
+    description = 'Extracts LWJGL Linux native .so files into build/natives/linux/.'
+    from configurations.lwjglNativesLinux.collect { zipTree(it) }
+    into layout.buildDirectory.dir('natives/linux')
+    include '**/*.so'
+    // Flatten: keep only the filename, drop the nested directory structure inside the JAR
+    eachFile { fcd -> fcd.relativePath = new RelativePath(true, fcd.name) }
+    includeEmptyDirs = false
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.register('extractWindowsNatives', Copy) {
+    group = 'build'
+    description = 'Extracts LWJGL Windows native .dll files into build/natives/windows/.'
+    from configurations.lwjglNativesWindows.collect { zipTree(it) }
+    into layout.buildDirectory.dir('natives/windows')
+    include '**/*.dll'
+    eachFile { fcd -> fcd.relativePath = new RelativePath(true, fcd.name) }
+    includeEmptyDirs = false
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            pom {
+                name = 'minelib'
+                description = 'A core library for launching Minecraft: Java Edition'
+                url = 'https://github.com/Cartrigger/minelib'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+            }
+        }
+    }
+}

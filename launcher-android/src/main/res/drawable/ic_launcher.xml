@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple launcher icon: blue square with a white pickaxe triangle -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background -->
+    <path
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z"
+        android:fillColor="#1f6feb" />
+
+    <!-- Foreground: stylised pickaxe chevron -->
+    <path
+        android:pathData="M54,22 L82,72 L26,72 Z"
+        android:fillColor="#c9d1d9" />
+
+    <path
+        android:pathData="M54,38 L70,68 L38,68 Z"
+        android:fillColor="#1f6feb" />
+</vector>
