@@ -4,8 +4,8 @@ name: Native Builds
 #
 # ┌─ test ──────────────────────────── every push / PR
 # │   └─ desktop (linux deb, mac dmg, windows exe)  ─┐
-# │   └─ android (apk)                               ├─ tags only
-# │        └─ release-assets                        ─┘
+# │   └─ android (apk)                               ├─ every push / PR
+# │        └─ release-assets (attach to GitHub Release) ─ tags only
 #
 # Platform outputs
 #   Linux   → .deb  (jpackage, Liberica JDK Full 21 + fakeroot)
@@ -85,28 +85,28 @@ jobs:
           cache: gradle
 
       # jpackage --type exe requires WiX 3.x (not 4.x).
-      # windows-latest (2025) no longer ships WiX 3 pre-installed, so we pin
-      # version 3.14.1 explicitly via Chocolatey and add its bin dir to PATH.
+      # windows-latest may already ship WiX 3.14.x pre-installed; if so, skip
+      # the Chocolatey install (which would fail trying to install an older
+      # build over the newer one).  Either way, add the bin dir to PATH.
       - name: Install WiX 3 toolset (Windows, required by jpackage --type exe)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          choco install wixtoolset --version 3.14.1 --no-progress -y
-          $wixBin = "C:\Program Files (x86)\WiX Toolset v3.14\bin"
-          if (Test-Path $wixBin) {
+          $wixBin = Get-ChildItem "C:\Program Files (x86)\WiX Toolset v3*\bin" `
+                      -ErrorAction SilentlyContinue |
+                    Select-Object -First 1 -ExpandProperty FullName
+          if (-not $wixBin) {
+            choco install wixtoolset --version 3.14.1 --no-progress -y
+            $wixBin = Get-ChildItem "C:\Program Files (x86)\WiX Toolset v3*\bin" `
+                        -ErrorAction SilentlyContinue |
+                      Select-Object -First 1 -ExpandProperty FullName
+          }
+          if ($wixBin) {
             "$wixBin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            Write-Host "WiX 3.14 added to PATH: $wixBin"
+            Write-Host "WiX 3 added to PATH: $wixBin"
           } else {
-            # Chocolatey may install to a slightly different path; find it
-            $found = Get-ChildItem "C:\Program Files (x86)\WiX Toolset*\bin" -ErrorAction SilentlyContinue |
-                     Select-Object -First 1 -ExpandProperty FullName
-            if ($found) {
-              "$found" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-              Write-Host "WiX found at: $found"
-            } else {
-              Write-Error "WiX toolset not found after install"
-              exit 1
-            }
+            Write-Error "WiX 3 toolset not found after install"
+            exit 1
           }
 
       - name: Install Linux packaging tools (fakeroot needed by jpackage --type deb)
@@ -115,13 +115,17 @@ jobs:
 
       # Read the version from gradle.properties so the package version always
       # matches the project version (no more hardcoded 0.1.0).
+      # macOS DMG (and Windows EXE) require the first version component to be
+      # >= 1, so we derive a jpackage-safe version: 0.x.y → 1.x.y.
       - name: Read project version
         id: ver
         shell: bash
         run: |
           VERSION=$(grep '^version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Launcher version: $VERSION"
+          JPACKAGE_VERSION=$(echo "$VERSION" | sed 's/^0\./1./')
+          echo "jpackage-version=$JPACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Launcher version: $VERSION (jpackage: $JPACKAGE_VERSION)"
 
       - name: Assemble jpackage input directory
         run: ./gradlew :launcher:jpackageInput --no-daemon
@@ -136,7 +140,7 @@ jobs:
             --name         MinelibLauncher \
             --type         deb \
             --add-modules  javafx.controls,javafx.graphics,javafx.fxml,javafx.base \
-            --app-version  "${{ steps.ver.outputs.version }}" \
+            --app-version  "${{ steps.ver.outputs.jpackage-version }}" \
             --vendor       "Minelib" \
             --description  "Cross-platform Minecraft launcher" \
             --linux-app-category games \
@@ -152,7 +156,7 @@ jobs:
             --name                   MinelibLauncher \
             --type                   dmg \
             --add-modules            javafx.controls,javafx.graphics,javafx.fxml,javafx.base \
-            --app-version            "${{ steps.ver.outputs.version }}" \
+            --app-version            "${{ steps.ver.outputs.jpackage-version }}" \
             --vendor                 "Minelib" \
             --description            "Cross-platform Minecraft launcher" \
             --mac-package-identifier io.minelib.launcher \
@@ -169,7 +173,7 @@ jobs:
             --name        MinelibLauncher `
             --type        exe `
             --add-modules "javafx.controls,javafx.graphics,javafx.fxml,javafx.base" `
-            --app-version "${{ steps.ver.outputs.version }}" `
+            --app-version "${{ steps.ver.outputs.jpackage-version }}" `
             --vendor      "Minelib" `
             --description "Cross-platform Minecraft launcher" `
             --win-dir-chooser `
@@ -188,7 +192,6 @@ jobs:
   android:
     name: Android APK
     needs: test
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
