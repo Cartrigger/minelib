@@ -13,6 +13,7 @@ import io.minelib.modloader.ModLoader;
 import io.minelib.modloader.ModLoaderInstaller;
 import io.minelib.modrinth.ModManager;
 import io.minelib.modrinth.ModrinthModManager;
+import io.minelib.questcraft.QuestCraftModManager;
 import io.minelib.runtime.JavaRuntimeManager;
 import io.minelib.version.VersionManager;
 import org.slf4j.Logger;
@@ -51,6 +52,7 @@ public class MineLib {
     private final JavaRuntimeManager javaRuntimeManager;
     private final GameLauncher gameLauncher;
     private final ModrinthModManager modrinthModManager;
+    private final QuestCraftModManager questCraftModManager;
 
     private MineLib(Builder builder) {
         this.gameDirectory = builder.gameDirectory;
@@ -61,6 +63,7 @@ public class MineLib {
         this.javaRuntimeManager = new JavaRuntimeManager(gameDirectory, downloadManager);
         this.gameLauncher = new GameLauncher(libraryManager, builder.gameRunner);
         this.modrinthModManager = new ModrinthModManager(downloadManager);
+        this.questCraftModManager = new QuestCraftModManager(downloadManager);
         LOGGER.info("MineLib initialized with game directory: {}", gameDirectory);
     }
 
@@ -109,6 +112,24 @@ public class MineLib {
      */
     public ModManager getModrinthModManager() {
         return modrinthModManager;
+    }
+
+    /**
+     * Returns the {@link QuestCraftModManager} for fetching and installing VR mods
+     * from the QuestCraft pojlib {@code QuestCraft-6.0.1} branch.
+     *
+     * <p>This is primarily useful on Android (Meta Quest) where Vivecraft and related
+     * performance mods are fetched from the curated {@code mods.json} manifest.
+     *
+     * <pre>{@code
+     * var mgr = minelib.getQuestCraftModManager();
+     * var entries = mgr.fetchVersionEntries();
+     * var entry = mgr.findVersion(entries, "1.21.10").orElseThrow();
+     * mgr.downloadAllMods(entry, modsDir);
+     * }</pre>
+     */
+    public QuestCraftModManager getQuestCraftModManager() {
+        return questCraftModManager;
     }
 
     /**
