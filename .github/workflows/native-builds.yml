@@ -140,6 +140,9 @@ jobs:
             --name         MinelibLauncher \
             --type         deb \
             --add-modules  javafx.controls,javafx.graphics,javafx.fxml,javafx.base \
+            --java-options "--add-modules=javafx.controls,javafx.graphics,javafx.fxml" \
+            --java-options "--add-opens=javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED" \
+            --java-options "--add-exports=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED" \
             --app-version  "${{ steps.ver.outputs.jpackage-version }}" \
             --vendor       "Minelib" \
             --description  "Cross-platform Minecraft launcher" \
@@ -156,6 +159,9 @@ jobs:
             --name                   MinelibLauncher \
             --type                   dmg \
             --add-modules            javafx.controls,javafx.graphics,javafx.fxml,javafx.base \
+            --java-options           "--add-modules=javafx.controls,javafx.graphics,javafx.fxml" \
+            --java-options           "--add-opens=javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED" \
+            --java-options           "--add-exports=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED" \
             --app-version            "${{ steps.ver.outputs.jpackage-version }}" \
             --vendor                 "Minelib" \
             --description            "Cross-platform Minecraft launcher" \
@@ -173,6 +179,9 @@ jobs:
             --name        MinelibLauncher `
             --type        exe `
             --add-modules "javafx.controls,javafx.graphics,javafx.fxml,javafx.base" `
+            --java-options "--add-modules=javafx.controls,javafx.graphics,javafx.fxml" `
+            --java-options "--add-opens=javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED" `
+            --java-options "--add-exports=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED" `
             --app-version "${{ steps.ver.outputs.jpackage-version }}" `
             --vendor      "Minelib" `
             --description "Cross-platform Minecraft launcher" `

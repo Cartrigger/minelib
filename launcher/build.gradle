@@ -78,9 +78,13 @@ test {
     useJUnitPlatform()
 }
 
-// Give the thin launcher JAR a fixed name so the jpackage command in CI is stable.
+// Give the thin launcher JAR a fixed name so the jpackage command in CI is stable,
+// and set Main-Class so `java -jar launcher.jar` works when a full JRE is available.
 tasks.named('jar') {
     archiveFileName = 'launcher.jar'
+    manifest {
+        attributes('Main-Class': application.mainClass.get())
+    }
 }
 
 // ---------------------------------------------------------------------------
