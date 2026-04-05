@@ -21,6 +21,21 @@
     <string name="launching">Launching Minecraft…</string>
     <string name="launch_failed">Launch failed</string>
 
+    <!-- Modrinth mod browser -->
+    <string name="mods">Mods</string>
+    <string name="mods_title">Modrinth Mods</string>
+    <string name="search_mods_hint">Search Modrinth mods…</string>
+    <string name="search">Search</string>
+    <string name="search_query_required">Please enter a search term</string>
+    <string name="search_failed">Search failed</string>
+    <string name="mods_hint">Search for mods to get started.</string>
+    <string name="mods_empty">No results found. Try a different search.</string>
+    <string name="install">Install</string>
+    <string name="downloads">downloads</string>
+    <string name="back">Back</string>
+    <string name="no_instances_for_install">Create an instance first before installing mods</string>
+    <string name="mod_queued_for_install">"%1$s" queued for "%2$s" (installs on next launch)</string>
+
     <!-- Mod loader spinner entries — order must match Instance.ModLoader enum -->
     <string-array name="mod_loaders">
         <item>Vanilla</item>

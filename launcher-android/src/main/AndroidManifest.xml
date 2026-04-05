@@ -40,5 +40,10 @@
         <activity
             android:name=".InstancesActivity"
             android:exported="false" />
+
+        <!-- Modrinth mod browser -->
+        <activity
+            android:name=".ModsActivity"
+            android:exported="false" />
     </application>
 </manifest>

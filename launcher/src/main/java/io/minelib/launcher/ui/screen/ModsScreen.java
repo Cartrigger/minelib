@@ -48,12 +48,12 @@ public final class ModsScreen extends BorderPane {
 
     private HBox buildToolbar() {
         Label heading = new Label("Modrinth Mods");
-        heading.getStyleClass().add("screen-heading");
+        heading.getStyleClass().add("top-bar-title");
 
         TextField tfSearch = new TextField();
         tfSearch.setPromptText("Search mods…");
-        tfSearch.setPrefWidth(240);
-        tfSearch.getStyleClass().add("text-field");
+        tfSearch.setPrefWidth(260);
+        tfSearch.getStyleClass().add("search-bar");
         tfSearch.setOnAction(e -> doSearch(tfSearch.getText().trim()));
 
         ComboBox<String> cbVersion = new ComboBox<>();
@@ -73,7 +73,7 @@ public final class ModsScreen extends BorderPane {
 
         HBox toolbar = new HBox(10, heading, spacer, tfSearch, cbVersion, btnSearch);
         toolbar.setAlignment(Pos.CENTER_LEFT);
-        toolbar.getStyleClass().add("screen-toolbar");
+        toolbar.getStyleClass().add("top-bar");
         toolbar.setPadding(new Insets(16, 20, 12, 20));
         return toolbar;
     }

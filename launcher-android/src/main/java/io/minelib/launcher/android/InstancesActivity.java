@@ -2,6 +2,7 @@ package io.minelib.launcher.android;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -69,6 +70,10 @@ public final class InstancesActivity extends Activity {
         refreshEmptyState();
 
         fab.setOnClickListener(v -> showAddInstanceDialog());
+
+        // Navigate to the Modrinth mod browser
+        Button btnMods = findViewById(R.id.btn_mods);
+        btnMods.setOnClickListener(v -> startActivity(new Intent(this, ModsActivity.class)));
     }
 
     // ── Add instance dialog ───────────────────────────────────────────────────

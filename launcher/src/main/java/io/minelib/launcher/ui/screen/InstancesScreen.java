@@ -63,7 +63,7 @@ public final class InstancesScreen extends BorderPane {
 
     private HBox buildToolbar() {
         Label heading = new Label("Instances");
-        heading.getStyleClass().add("screen-heading");
+        heading.getStyleClass().add("top-bar-title");
 
         Button btnNew  = new Button("+ New Instance");
         btnNew.getStyleClass().add("btn-primary");
@@ -78,7 +78,7 @@ public final class InstancesScreen extends BorderPane {
 
         HBox toolbar = new HBox(12, heading, spacer, btnMods, btnNew);
         toolbar.setAlignment(Pos.CENTER_LEFT);
-        toolbar.getStyleClass().add("screen-toolbar");
+        toolbar.getStyleClass().add("top-bar");
         toolbar.setPadding(new Insets(16, 20, 12, 20));
         return toolbar;
     }
