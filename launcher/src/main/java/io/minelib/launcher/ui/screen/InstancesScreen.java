@@ -42,7 +42,8 @@ public final class InstancesScreen extends BorderPane {
     private final AuthService     authService;
     private final InstanceService instanceService;
     private final Runnable        onOpenMods;
-    private final FlowPane        cardGrid = new FlowPane(12, 12);
+    private final FlowPane        cardGrid   = new FlowPane(12, 12);
+    private final Label           statusBar  = new Label();
 
     public InstancesScreen(AuthService authService, InstanceService instanceService,
                            Runnable onOpenMods) {
@@ -52,8 +53,14 @@ public final class InstancesScreen extends BorderPane {
 
         getStyleClass().add("instances-screen");
 
+        statusBar.getStyleClass().add("label-muted");
+        statusBar.setVisible(false);
+        statusBar.setManaged(false);
+
         setTop(buildToolbar());
         setCenter(buildCardArea());
+        setBottom(statusBar);
+        BorderPane.setMargin(statusBar, new Insets(4, 20, 8, 20));
         setPadding(new Insets(0, 0, 0, 0));
 
         loadInstances();
@@ -165,13 +172,20 @@ public final class InstancesScreen extends BorderPane {
     // ── Actions ───────────────────────────────────────────────────────────────
 
     private void launchInstance(Instance instance) {
+        statusBar.setText("⏳ Launching \"" + instance.getName() + "\" — downloading files if needed…");
+        statusBar.setVisible(true);
+        statusBar.setManaged(true);
+
         new Thread(() -> {
             try {
                 instanceService.launch(instance, authService.getProfile());
-                instance.markPlayed();
-                instanceService.saveInstance(instance);
+                Platform.runLater(() -> {
+                    statusBar.setText("✅ Launched \"" + instance.getName() + "\"");
+                    loadInstances();
+                });
             } catch (Exception ex) {
                 Platform.runLater(() -> {
+                    statusBar.setText("❌ Launch failed: " + ex.getMessage());
                     Alert err = new Alert(Alert.AlertType.ERROR,
                             "Launch failed: " + ex.getMessage());
                     err.showAndWait();

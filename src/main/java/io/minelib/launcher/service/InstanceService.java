@@ -4,8 +4,14 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import io.minelib.MineLib;
+import io.minelib.auth.AuthProvider;
 import io.minelib.auth.PlayerProfile;
+import io.minelib.launch.LaunchConfig;
 import io.minelib.launcher.model.Instance;
+import io.minelib.modloader.ModLoaderInstaller;
+import io.minelib.modloader.ModLoaderVersion;
+import io.minelib.runtime.JavaRuntime;
+import io.minelib.version.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -155,15 +161,60 @@ public final class InstanceService {
         instance.markPlayed();
         saveInstance(instance);
 
-        return minelib.installAndLaunch(instance.getMinecraftVersion(),
-                new io.minelib.auth.AuthProvider() {
-                    @Override
-                    public PlayerProfile authenticate() { return profile; }
-                    @Override
-                    public PlayerProfile refresh(PlayerProfile p) { return profile; }
-                    @Override
-                    public boolean validate(PlayerProfile p) { return true; }
-                });
+        AuthProvider authProvider = new AuthProvider() {
+            @Override public PlayerProfile authenticate() { return profile; }
+            @Override public PlayerProfile refresh(PlayerProfile p) { return profile; }
+            @Override public boolean validate(PlayerProfile p) { return true; }
+        };
+
+        // For vanilla instances use the convenience method directly
+        if (instance.getModLoader() == Instance.ModLoader.VANILLA) {
+            return minelib.installAndLaunch(instance.getMinecraftVersion(), authProvider);
+        }
+
+        // For modded instances install the mod loader first, then launch the resulting profile
+        io.minelib.modloader.ModLoader loader = switch (instance.getModLoader()) {
+            case FABRIC   -> io.minelib.modloader.ModLoader.FABRIC;
+            case FORGE    -> io.minelib.modloader.ModLoader.FORGE;
+            case NEOFORGE -> io.minelib.modloader.ModLoader.NEOFORGE;
+            default       -> null;
+        };
+
+        if (loader == null) {
+            LOGGER.warn("Unknown mod loader {}, falling back to vanilla", instance.getModLoader());
+            return minelib.installAndLaunch(instance.getMinecraftVersion(), authProvider);
+        }
+
+        LOGGER.info("Installing {} for Minecraft {}", loader, instance.getMinecraftVersion());
+        ModLoaderInstaller installer = minelib.getModLoaderInstaller(loader);
+        List<ModLoaderVersion> versions = installer.listVersions(instance.getMinecraftVersion());
+        if (versions.isEmpty()) {
+            LOGGER.warn("No {} versions found for {}, falling back to vanilla",
+                    loader, instance.getMinecraftVersion());
+            return minelib.installAndLaunch(instance.getMinecraftVersion(), authProvider);
+        }
+
+        // Install the latest stable version (or the first one if none are marked stable)
+        ModLoaderVersion chosen = versions.stream()
+                .filter(ModLoaderVersion::isStable)
+                .findFirst()
+                .orElse(versions.get(0));
+        VersionInfo modProfile = installer.install(chosen, gameDir);
+
+        // Download assets and libraries for the modded profile, then launch
+        minelib.getAssetManager().downloadAssets(modProfile);
+        minelib.getLibraryManager().downloadLibraries(modProfile);
+        JavaRuntime runtime = minelib.getJavaRuntimeManager()
+                .provisionRuntime(modProfile.getJavaVersion());
+
+        LaunchConfig config = LaunchConfig.builder()
+                .version(modProfile)
+                .authProvider(authProvider)
+                .javaRuntime(runtime)
+                .gameDirectory(gameDir)
+                .build();
+
+        return minelib.getLauncher().launch(config);
     }
 
     // -------------------------------------------------------------------------

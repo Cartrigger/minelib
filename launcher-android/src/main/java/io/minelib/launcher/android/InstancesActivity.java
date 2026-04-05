@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
@@ -16,6 +17,8 @@ import io.minelib.MineLib;
 import io.minelib.android.AndroidGameRunner;
 import io.minelib.android.MobileGluesConfig;
 import io.minelib.android.MobileGluesDriver;
+import io.minelib.auth.AuthProvider;
+import io.minelib.auth.PlayerProfile;
 import io.minelib.download.DownloadManager;
 import io.minelib.launcher.model.Instance;
 import io.minelib.launcher.service.AuthService;
@@ -155,9 +158,15 @@ public final class InstancesActivity extends Activity {
                 instance.markPlayed();
                 instanceService.saveInstance(instance);
 
+                final PlayerProfile profile = authService.getProfile();
+                final AuthProvider authProvider = new AuthProvider() {
+                    @Override public PlayerProfile authenticate() { return profile; }
+                    @Override public PlayerProfile refresh(PlayerProfile p) { return profile; }
+                    @Override public boolean validate(PlayerProfile p) { return true; }
+                };
                 minelib.installAndLaunch(
                         instance.getMinecraftVersion(),
-                        authService.getProfile());
+                        authProvider);
 
             } catch (Exception e) {
                 runOnUiThread(() ->
