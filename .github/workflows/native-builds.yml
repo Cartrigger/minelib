@@ -53,14 +53,9 @@ jobs:
           path: launcher/build/reports/tests/
           retention-days: 7
 
-  # ─── Desktop native packages ────────────────────────────────────────────────
-  # Only executed when a version tag is pushed or the workflow is dispatched
-  # manually.  Each runner produces the native installer for its own OS, which
-  # is the only correct way — jpackage must run on the target OS.
   desktop:
     name: Desktop (${{ matrix.os }})
     needs: test
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
