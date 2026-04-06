@@ -32,23 +32,14 @@ class JavaRuntimeManagerFclTest {
     }
 
     @Test
-    void selectFclVersion21ForRequired21() throws IOException {
-        assertEquals(21, JavaRuntimeManager.selectFclVersion(21));
+    void selectFclVersion25ForRequired21() throws IOException {
+        assertEquals(25, JavaRuntimeManager.selectFclVersion(21));
     }
 
     @Test
-    void selectFclVersion21ForRequiredBetween17And21() throws IOException {
-        assertEquals(21, JavaRuntimeManager.selectFclVersion(18));
-        assertEquals(21, JavaRuntimeManager.selectFclVersion(20));
-    }
-
-    @Test
-    void selectFclVersion25ForRequired25() throws IOException {
-        assertEquals(25, JavaRuntimeManager.selectFclVersion(25));
-    }
-
-    @Test
-    void selectFclVersion25ForRequiredBetween21And25() throws IOException {
+    void selectFclVersion25ForRequiredBetween17And25() throws IOException {
+        assertEquals(25, JavaRuntimeManager.selectFclVersion(18));
+        assertEquals(25, JavaRuntimeManager.selectFclVersion(20));
         assertEquals(25, JavaRuntimeManager.selectFclVersion(22));
         assertEquals(25, JavaRuntimeManager.selectFclVersion(24));
     }

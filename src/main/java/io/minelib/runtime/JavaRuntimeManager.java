@@ -63,10 +63,10 @@ public final class JavaRuntimeManager {
             + "/Build_JRE_%d/jre%d-multiarch.zip";
 
     /** FCL OpenJDK major versions that have a corresponding {@code Build_JRE_*} branch. */
-    private static final Set<Integer> FCL_SUPPORTED_VERSIONS = Set.of(17, 21, 25);
+    private static final Set<Integer> FCL_SUPPORTED_VERSIONS = Set.of(17, 25);
 
     /** Human-readable list of supported FCL versions, used in error messages and Javadoc. */
-    static final String FCL_SUPPORTED_VERSIONS_STR = "17, 21, 25";
+    static final String FCL_SUPPORTED_VERSIONS_STR = "17, 25";
 
     private static final Map<String, String> ADOPTIUM_OS = Map.of(
             "windows", "windows",
