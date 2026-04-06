@@ -7,6 +7,7 @@ import io.minelib.launcher.service.AuthService;
 import io.minelib.launcher.service.InstanceService;
 import okhttp3.OkHttpClient;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 
