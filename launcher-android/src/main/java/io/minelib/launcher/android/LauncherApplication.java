@@ -49,10 +49,17 @@ public final class LauncherApplication extends Application {
 
         // Extract all bundled FCL JRE versions in a background thread.
         // jresReady completes once every extraction is done so launch code can wait safely.
+        // JRE versions whose asset ZIPs were not included in the APK (e.g. JRE 8 and JRE 25
+        // are downloaded by CI with a fallback "|| true" and may be absent) are skipped with
+        // a warning rather than failing the future.
         final android.content.Context appCtx = getApplicationContext();
         new Thread(() -> {
             IOException firstFailure = null;
             for (int version : BundledJreExtractor.BUNDLED_JRE_VERSIONS) {
+                if (!BundledJreExtractor.isAssetAvailable(appCtx, version)) {
+                    Log.w(TAG, "JRE " + version + " asset not bundled in this APK – skipping");
+                    continue;
+                }
                 try {
                     BundledJreExtractor.extractIfNeeded(appCtx, version);
                 } catch (Exception e) {

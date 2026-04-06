@@ -70,6 +70,27 @@ public final class BundledJreExtractor {
     // ── Public API ────────────────────────────────────────────────────────────
 
     /**
+     * Returns {@code true} if the multiarch ZIP asset for {@code jreVersion} is present
+     * in the APK (i.e. was downloaded by CI and included in the build).
+     *
+     * <p>Use this before calling {@link #extractIfNeeded} to avoid a hard failure when
+     * a JRE version was optionally skipped during the APK build.
+     *
+     * @param ctx        any Android context (e.g. {@link android.app.Application})
+     * @param jreVersion FCL JRE major version to check ({@code 8}, {@code 17}, or {@code 25})
+     * @return {@code true} if the asset ZIP exists; {@code false} if it was not bundled
+     */
+    public static boolean isAssetAvailable(Context ctx, int jreVersion) {
+        String assetZip = "bundled-jre/jre" + jreVersion + "-multiarch.zip";
+        try {
+            ctx.getAssets().open(assetZip).close();
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    /**
      * Extracts the FCL OpenJDK for {@code jreVersion} from APK assets into internal
      * storage, if it has not already been extracted.
      *
