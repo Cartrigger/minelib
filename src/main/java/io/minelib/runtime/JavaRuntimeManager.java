@@ -47,10 +47,10 @@ public final class JavaRuntimeManager {
             "https://api.adoptium.net/v3/assets/latest/%d/hotspot?architecture=%s&image_type=jre&os=%s&vendor=eclipse";
 
     /** FCL OpenJDK major versions that have a successful {@code Build_JRE_*} CI run. */
-    private static final Set<Integer> FCL_SUPPORTED_VERSIONS = Set.of(17, 25);
+    private static final Set<Integer> FCL_SUPPORTED_VERSIONS = Set.of(8, 17, 25);
 
     /** Human-readable list of supported FCL versions, used in error messages and Javadoc. */
-    static final String FCL_SUPPORTED_VERSIONS_STR = "17, 25";
+    static final String FCL_SUPPORTED_VERSIONS_STR = "8, 17, 25";
 
     private static final Map<String, String> ADOPTIUM_ARCH = Map.of(
             "amd64", "x64",

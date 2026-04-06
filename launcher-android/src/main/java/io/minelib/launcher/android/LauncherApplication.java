@@ -17,10 +17,10 @@ import java.util.concurrent.CompletableFuture;
  * <p>Services are created once on first app start and remain alive for the
  * lifetime of the process. Activities retrieve them via {@link #get(Context)}.
  *
- * <p>The bundled FCL OpenJDK is extracted from APK assets into internal storage
- * on the very first run (subsequent runs skip extraction if already done).
- * The extraction result is exposed via {@link #getJreReady()} so that launch
- * code can wait for it to complete before starting the game.
+ * <p>All bundled FCL OpenJDK versions (8, 17, 25) are extracted from APK assets into
+ * internal storage on the very first run (subsequent runs skip extraction if already done).
+ * {@link #getJresReady()} returns a {@link CompletableFuture} that completes once every
+ * bundled JRE has been extracted (or failed); callers block on it before launching Minecraft.
  */
 public final class LauncherApplication extends Application {
 
@@ -31,40 +31,52 @@ public final class LauncherApplication extends Application {
     private InstanceService instanceService;
 
     /**
-     * Future that completes with the extracted JRE root path once
-     * {@link BundledJreExtractor#extractIfNeeded} has finished (or exceptionally if it failed).
-     * Use {@link CompletableFuture#get()} in any background thread that needs the JRE.
+     * Future that completes (with {@code null}) when all bundled JRE versions have been
+     * extracted from APK assets, or exceptionally if a required JRE version could not be
+     * extracted.  Background launch threads should call {@link CompletableFuture#get()} on
+     * this before invoking {@code MineLib.installAndLaunch(…)}.
      */
-    private final CompletableFuture<Path> jreReady = new CompletableFuture<>();
+    private final CompletableFuture<Void> jresReady = new CompletableFuture<>();
 
     @Override
     public void onCreate() {
         super.onCreate();
         httpClient = new OkHttpClient();
-        java.nio.file.Path dataDir = getFilesDir().toPath();
-        authService    = new AuthService(dataDir, httpClient);
+        Path dataDir = getFilesDir().toPath();
+        authService     = new AuthService(dataDir, httpClient);
         instanceService = new InstanceService(dataDir);
 
-        // Extract the bundled FCL OpenJDK from APK assets on the first run.
-        // Runs on a background thread; callers block on jreReady.get() before launching.
+        // Extract all bundled FCL JRE versions in a background thread.
+        // jresReady completes once every extraction is done so launch code can wait safely.
         final android.content.Context appCtx = getApplicationContext();
         new Thread(() -> {
-            try {
-                Path jreDir = BundledJreExtractor.extractIfNeeded(appCtx);
-                jreReady.complete(jreDir);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to extract bundled JRE", e);
-                jreReady.completeExceptionally(e);
+            IOException firstFailure = null;
+            for (int version : BundledJreExtractor.BUNDLED_JRE_VERSIONS) {
+                try {
+                    BundledJreExtractor.extractIfNeeded(appCtx, version);
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to extract bundled JRE " + version, e);
+                    if (firstFailure == null) {
+                        firstFailure = (e instanceof IOException)
+                                ? (IOException) e
+                                : new java.io.IOException("JRE " + version + " extraction failed", e);
+                    }
+                }
+            }
+            if (firstFailure != null) {
+                jresReady.completeExceptionally(firstFailure);
+            } else {
+                jresReady.complete(null);
             }
         }, "jre-extractor").start();
     }
 
     /**
-     * Returns a future that completes with the extracted JRE root directory.
+     * Returns a future that completes when all bundled JRE versions are extracted and ready.
      * Background threads should call {@link CompletableFuture#get()} on this before
      * attempting to launch Minecraft.
      */
-    public CompletableFuture<Path> getJreReady() { return jreReady; }
+    public CompletableFuture<Void> getJresReady() { return jresReady; }
 
     /** Returns the shared {@link AuthService}. */
     public AuthService getAuthService() { return authService; }
@@ -76,11 +88,11 @@ public final class LauncherApplication extends Application {
     public OkHttpClient getHttpClient() { return httpClient; }
 
     /**
-     * Convenience cast to retrieve the {@link LauncherApplication} from any
-     * {@link Context}.
+     * Convenience cast to retrieve the {@link LauncherApplication} from any {@link Context}.
      */
     public static LauncherApplication get(Context ctx) {
         return (LauncherApplication) ctx.getApplicationContext();
     }
 }
+
 

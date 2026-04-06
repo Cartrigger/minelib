@@ -213,15 +213,32 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      # Download the FCL OpenJDK 17 multiarch bundle from nightly.link and place it
-      # in the APK assets folder so BundledJreExtractor can extract it on first run.
-      # JRE 17 (Build_JRE_17) is the last successfully-built branch in FCL-Team/Android-OpenJDK-Build.
-      - name: Download bundled FCL JRE 17 multiarch asset
+      # Download FCL OpenJDK multiarch bundles from nightly.link and place them in the
+      # APK assets folder so BundledJreExtractor can extract them on first run.
+      #
+      # JRE 17 (Build_JRE_17) is confirmed working.
+      # JRE 8 and JRE 25 are downloaded with fallback (|| true) because the
+      # corresponding FCL CI branches may not have a recent successful run.
+      - name: Download bundled FCL JRE assets
         run: |
           mkdir -p launcher-android/src/main/assets/bundled-jre
+
+          # JRE 17 — confirmed working; fail the build if this download fails
           curl -fsSL -o launcher-android/src/main/assets/bundled-jre/jre17-multiarch.zip \
             "https://nightly.link/FCL-Team/Android-OpenJDK-Build/workflows/build.yml/Build_JRE_17/jre17-multiarch.zip"
-          echo "Bundled JRE asset size: $(du -sh launcher-android/src/main/assets/bundled-jre/jre17-multiarch.zip | cut -f1)"
+          echo "JRE 17 asset: $(du -sh launcher-android/src/main/assets/bundled-jre/jre17-multiarch.zip | cut -f1)"
+
+          # JRE 8 — download with fallback; skip if unavailable
+          curl -fsSL -o launcher-android/src/main/assets/bundled-jre/jre8-multiarch.zip \
+            "https://nightly.link/FCL-Team/Android-OpenJDK-Build/workflows/build.yml/Build_JRE_8/jre8-multiarch.zip" \
+            && echo "JRE 8 asset: $(du -sh launcher-android/src/main/assets/bundled-jre/jre8-multiarch.zip | cut -f1)" \
+            || { echo "⚠ JRE 8 not available from FCL nightly.link — skipping"; rm -f launcher-android/src/main/assets/bundled-jre/jre8-multiarch.zip; }
+
+          # JRE 25 — download with fallback; skip if unavailable
+          curl -fsSL -o launcher-android/src/main/assets/bundled-jre/jre25-multiarch.zip \
+            "https://nightly.link/FCL-Team/Android-OpenJDK-Build/workflows/build.yml/Build_JRE_25/jre25-multiarch.zip" \
+            && echo "JRE 25 asset: $(du -sh launcher-android/src/main/assets/bundled-jre/jre25-multiarch.zip | cut -f1)" \
+            || { echo "⚠ JRE 25 not available from FCL nightly.link — skipping"; rm -f launcher-android/src/main/assets/bundled-jre/jre25-multiarch.zip; }
 
       # ubuntu-latest ships Android SDK with compileSdk 34 + build-tools 34.0.0
       # pre-installed.  The -PandroidBuild=true flag activates the launcher-android

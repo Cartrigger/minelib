@@ -15,11 +15,42 @@
     <string name="mod_loader">Mod loader</string>
     <string name="create">Create</string>
     <string name="cancel">Cancel</string>
-    <string name="play">Play</string>
+    <string name="play">▶ Play</string>
     <string name="fields_required">Name and version are required</string>
     <string name="create_failed">Could not create instance</string>
     <string name="launching">Launching Minecraft…</string>
     <string name="launch_failed">Launch failed</string>
+    <string name="ok">OK</string>
+
+    <!-- Instance overflow menu / actions -->
+    <string name="instance_options">Instance options</string>
+    <string name="edit">Edit</string>
+    <string name="edit_instance">Edit Instance</string>
+    <string name="save">Save</string>
+    <string name="save_failed">Could not save instance</string>
+    <string name="instance_saved">Instance saved</string>
+    <string name="info">Info</string>
+    <string name="delete">Delete</string>
+    <string name="delete_instance">Delete Instance</string>
+    <string name="delete_confirm">Delete &#8220;%1$s&#8221;? This cannot be undone.</string>
+    <string name="delete_failed">Could not delete instance</string>
+    <string name="instance_deleted">Instance deleted</string>
+    <string name="max_memory">Max memory</string>
+    <string name="never">Never</string>
+
+    <!-- Instance info dialog field labels -->
+    <string name="info_version">Version</string>
+    <string name="info_loader">Mod loader</string>
+    <string name="info_memory">Memory</string>
+    <string name="info_last_played">Last played</string>
+    <string name="info_id">ID</string>
+
+    <!-- Settings -->
+    <string name="settings">⚙ Settings</string>
+    <string name="settings_account">Account</string>
+    <string name="not_signed_in">Not signed in</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="signed_out">Signed out</string>
 
     <!-- Modrinth mod browser -->
     <string name="mods">Mods</string>
@@ -34,7 +65,7 @@
     <string name="downloads">downloads</string>
     <string name="back">Back</string>
     <string name="no_instances_for_install">Create an instance first before installing mods</string>
-    <string name="mod_queued_for_install">"%1$s" queued for "%2$s" (installs on next launch)</string>
+    <string name="mod_queued_for_install">&#8220;%1$s&#8221; queued for &#8220;%2$s&#8221; (installs on next launch)</string>
 
     <!-- Mod loader spinner entries — order must match Instance.ModLoader enum -->
     <string-array name="mod_loaders">
@@ -44,3 +75,4 @@
         <item>NeoForge</item>
     </string-array>
 </resources>
+

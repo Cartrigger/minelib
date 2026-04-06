@@ -52,6 +52,10 @@ dependencies {
     // appear on the Android compile classpath.
     implementation project(':')
 
+    // Pure-Java XZ decompressor — used by BundledJreExtractor to unpack .tar.xz
+    // archives from the bundled JRE assets without requiring the system 'tar' binary.
+    implementation 'org.tukaani:xz:1.10'
+
     // AndroidX / Material
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'
