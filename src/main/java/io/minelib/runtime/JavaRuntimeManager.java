@@ -2,7 +2,6 @@ package io.minelib.runtime;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import io.minelib.download.DownloadManager;
 import io.minelib.download.DownloadTask;
@@ -16,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -24,20 +22,18 @@ import java.util.Set;
 /**
  * Manages Java runtime provisioning for launching Minecraft.
  *
- * <p>On <strong>desktop</strong> (Windows, macOS, Linux) this class can use the JVM already
- * present on the host system or download a suitable Adoptium (Eclipse Temurin) JRE from
- * the Adoptium API and install it under {@code <gameDirectory>/runtime/}.
+ * <p>On <strong>desktop</strong> (Windows, macOS, Linux) this class uses the JVM already
+ * present on the host system or downloads a suitable Adoptium (Eclipse Temurin) JRE from
+ * the Adoptium API and installs it under {@code <gameDirectory>/runtime/}.
  *
- * <p>On <strong>Android</strong> (including Meta Quest VR headsets) this class downloads and
- * installs a pre-built OpenJDK from the
- * <a href="https://github.com/FCL-Team/Android-OpenJDK-Build">FCL-Team/Android-OpenJDK-Build</a>
- * CI artifacts via <a href="https://nightly.link">nightly.link</a>.  Supported major versions
- * are {@value #FCL_SUPPORTED_VERSIONS_STR}.  The runtime is installed once into
- * {@code <gameDirectory>/runtime/fcl-jre-<version>/} and reused on subsequent launches.
+ * <p>On <strong>Android</strong> (including Meta Quest VR headsets) the FCL OpenJDK is
+ * pre-extracted from the APK's bundled assets by {@code BundledJreExtractor} before this
+ * class is used.  Supported FCL major versions are {@value #FCL_SUPPORTED_VERSIONS_STR};
+ * the extracted runtime lives at {@code <gameDirectory>/runtime/fcl-jre-<version>/}.
  *
  * <p>The {@link #provisionRuntime(int)} method first checks whether a previously
  * installed runtime that satisfies the requested major version is already available under
- * the managed directory before downloading a new one.
+ * the managed directory before attempting a download.
  */
 public final class JavaRuntimeManager {
 
@@ -45,34 +41,16 @@ public final class JavaRuntimeManager {
 
     /**
      * Adoptium (Eclipse Temurin) API endpoint for the latest release of a given feature version.
-     * Parameters: {@code featureVersion}, {@code os}, {@code arch}, {@code imageType}.
+     * Parameters: {@code featureVersion}, {@code arch}, {@code os}.
      */
     private static final String ADOPTIUM_API =
             "https://api.adoptium.net/v3/assets/latest/%d/hotspot?architecture=%s&image_type=jre&os=%s&vendor=eclipse";
 
-    /**
-     * nightly.link URL template for the FCL Android JDK multiarch artifact.
-     * Parameters: {@code majorVersion} (twice).
-     *
-     * <p>The downloaded ZIP contains:
-     * {@code universal.tar.xz}, {@code bin-aarch64.tar.xz}, {@code bin-aarch32.tar.xz},
-     * {@code bin-amd64.tar.xz}, {@code bin-i386.tar.xz}, and {@code version}.
-     */
-    private static final String FCL_NIGHTLY_URL =
-            "https://nightly.link/FCL-Team/Android-OpenJDK-Build/workflows/build.yml"
-            + "/Build_JRE_%d/jre%d-multiarch.zip";
-
-    /** FCL OpenJDK major versions that have a corresponding {@code Build_JRE_*} branch. */
+    /** FCL OpenJDK major versions that have a successful {@code Build_JRE_*} CI run. */
     private static final Set<Integer> FCL_SUPPORTED_VERSIONS = Set.of(17, 25);
 
     /** Human-readable list of supported FCL versions, used in error messages and Javadoc. */
     static final String FCL_SUPPORTED_VERSIONS_STR = "17, 25";
-
-    private static final Map<String, String> ADOPTIUM_OS = Map.of(
-            "windows", "windows",
-            "osx", "mac",
-            "linux", "linux"
-    );
 
     private static final Map<String, String> ADOPTIUM_ARCH = Map.of(
             "amd64", "x64",
@@ -139,23 +117,26 @@ public final class JavaRuntimeManager {
     /**
      * Provisions an FCL OpenJDK for the given required major version on Android.
      *
-     * <p>The method selects the smallest supported FCL version that is
-     * {@code >= requiredMajorVersion}, then either returns the already-installed runtime or
-     * downloads it from nightly.link.
+     * <p>The JRE must have been pre-extracted from the APK's bundled assets (by
+     * {@code BundledJreExtractor}) before this method is called.  If the runtime
+     * directory does not exist this method throws {@link IOException} rather than
+     * attempting a network download.
      *
      * @param requiredMajorVersion minimum Java major version required
-     * @return the installed {@link JavaRuntime}
-     * @throws IOException if no suitable FCL version exists or the download fails
+     * @return the pre-installed {@link JavaRuntime}
+     * @throws IOException if no pre-extracted FCL JRE satisfying the requirement is found
      */
     private JavaRuntime provisionAndroidFclRuntime(int requiredMajorVersion) throws IOException {
         int fclVersion = selectFclVersion(requiredMajorVersion);
         Path runtimeDir = gameDirectory.resolve("runtime").resolve("fcl-jre-" + fclVersion);
         if (Files.isDirectory(runtimeDir) && Files.exists(runtimeDir.resolve("release"))) {
-            LOGGER.debug("Using cached FCL OpenJDK {} at {}", fclVersion, runtimeDir);
-            return new JavaRuntime(fclVersion, "FCL OpenJDK", runtimeDir);
+            LOGGER.debug("Using bundled FCL OpenJDK {} at {}", fclVersion, runtimeDir);
+            return new JavaRuntime(fclVersion, "FCL OpenJDK (bundled)", runtimeDir);
         }
-        LOGGER.info("Downloading FCL OpenJDK {} for Android from nightly.link", fclVersion);
-        return downloadFclRuntime(fclVersion, runtimeDir);
+        throw new IOException(
+                "Bundled FCL OpenJDK " + fclVersion + " has not been extracted yet. "
+                + "Ensure BundledJreExtractor.extractIfNeeded() was called on app startup. "
+                + "Expected directory: " + runtimeDir);
     }
 
     /**
@@ -170,46 +151,6 @@ public final class JavaRuntimeManager {
                 .orElseThrow(() -> new IOException(
                         "No FCL OpenJDK available for Java " + required
                         + ". Supported versions: " + FCL_SUPPORTED_VERSIONS_STR));
-    }
-
-    /**
-     * Downloads the FCL OpenJDK multiarch ZIP from nightly.link, extracts the
-     * {@code universal.tar.xz} and the architecture-specific {@code bin-*.tar.xz} into
-     * {@code targetDir}, then returns a {@link JavaRuntime} pointing to that directory.
-     *
-     * <p>The architecture is detected automatically from the JVM's {@code os.arch} system
-     * property; defaults to {@code aarch64} (suitable for Meta Quest).
-     */
-    private JavaRuntime downloadFclRuntime(int version, Path targetDir) throws IOException {
-        String archSuffix = detectFclArchSuffix();
-        String url = String.format(FCL_NIGHTLY_URL, version, version);
-
-        Path parent = targetDir.getParent();
-        Files.createDirectories(parent);
-        Path zipPath = parent.resolve("fcl-jre-" + version + "-multiarch.zip");
-        Path tempDir = parent.resolve("fcl-jre-" + version + "-tmp");
-
-        try {
-            downloadManager.download(DownloadTask.builder()
-                    .url(url)
-                    .destination(zipPath)
-                    .build());
-
-            Files.createDirectories(tempDir);
-            extractZipNoStrip(zipPath, tempDir);
-            Files.deleteIfExists(zipPath);
-
-            Files.createDirectories(targetDir);
-            extractTarXz(tempDir.resolve("universal.tar.xz"), targetDir);
-            extractTarXz(tempDir.resolve("bin-" + archSuffix + ".tar.xz"), targetDir);
-
-            return new JavaRuntime(version, "FCL OpenJDK", targetDir);
-        } finally {
-            Files.deleteIfExists(zipPath);
-            if (Files.isDirectory(tempDir)) {
-                deleteDirectory(tempDir);
-            }
-        }
     }
 
     /**
@@ -234,82 +175,7 @@ public final class JavaRuntimeManager {
         return "aarch64"; // Safe default for Meta Quest
     }
 
-    /**
-     * Extracts a ZIP archive into {@code targetDir} <em>without</em> stripping any leading
-     * path component.  Used for the nightly.link multiarch ZIPs, which store all files at
-     * the root level of the archive.
-     *
-     * <p>Path-traversal entries (entries that resolve outside {@code targetDir}) are rejected.
-     */
-    private static void extractZipNoStrip(Path archive, Path targetDir) throws IOException {
-        Path canonicalTarget = targetDir.toAbsolutePath().normalize();
-        try (var zis = new java.util.zip.ZipInputStream(Files.newInputStream(archive))) {
-            java.util.zip.ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                String name = entry.getName();
-                if (name.isEmpty()) {
-                    zis.closeEntry();
-                    continue;
-                }
-                Path dest = canonicalTarget.resolve(name).normalize();
-                if (!dest.startsWith(canonicalTarget)) {
-                    throw new IOException("Zip entry escapes target directory: " + name);
-                }
-                if (entry.isDirectory()) {
-                    Files.createDirectories(dest);
-                } else {
-                    Files.createDirectories(dest.getParent());
-                    Files.copy(zis, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                }
-                zis.closeEntry();
-            }
-        }
-    }
-
-    /**
-     * Extracts a {@code .tar.xz} archive into {@code targetDir} using the system {@code tar}
-     * command.  Files are extracted without stripping any leading path component.
-     *
-     * <p>Android (toybox ≥ Android 6.0) and desktop Linux both provide a {@code tar}
-     * implementation that supports XZ compression via the {@code -J} flag.
-     *
-     * @throws IOException if the {@code tar} process exits with a non-zero code or is
-     *                     interrupted, or if the archive file does not exist
-     */
-    private static void extractTarXz(Path archive, Path targetDir) throws IOException {
-        if (!Files.exists(archive)) {
-            throw new IOException("FCL JDK archive not found: " + archive
-                    + " — the requested architecture may not be supported by this build");
-        }
-        Files.createDirectories(targetDir);
-        ProcessBuilder pb = new ProcessBuilder(
-                "tar", "-xJf", archive.toAbsolutePath().toString(),
-                "-C", targetDir.toAbsolutePath().toString());
-        pb.inheritIO();
-        try {
-            int exit = pb.start().waitFor();
-            if (exit != 0) {
-                throw new IOException(
-                        "tar -xJf exited with code " + exit + " for " + archive);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Extraction of " + archive + " was interrupted", e);
-        }
-    }
-
-    /** Recursively deletes a directory tree, silently ignoring individual failures. */
-    private static void deleteDirectory(Path dir) throws IOException {
-        try (var stream = Files.walk(dir)) {
-            stream.sorted(Comparator.reverseOrder())
-                    .forEach(p -> {
-                        try {
-                            Files.deleteIfExists(p);
-                        } catch (IOException ignored) {
-                        }
-                    });
-        }
-    }
+    // ── Desktop: Adoptium JRE download ────────────────────────────────────────
 
     /**
      * Downloads and installs a Temurin JRE for the requested version.

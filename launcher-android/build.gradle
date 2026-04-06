@@ -32,6 +32,12 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    // Prevent AAPT from trying to compress the bundled-jre ZIP (it is already
+    // compressed internally; double-compression would corrupt the ZipInputStream read).
+    aaptOptions {
+        noCompress 'zip', 'xz'
+    }
 }
 
 repositories {

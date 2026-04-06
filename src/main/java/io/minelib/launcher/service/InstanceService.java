@@ -169,7 +169,8 @@ public final class InstanceService {
 
         // For vanilla instances use the convenience method directly
         if (instance.getModLoader() == Instance.ModLoader.VANILLA) {
-            return minelib.installAndLaunch(instance.getMinecraftVersion(), authProvider);
+            return minelib.installAndLaunch(instance.getMinecraftVersion(), authProvider,
+                    instance.getMemoryMb());
         }
 
         // For modded instances install the mod loader first, then launch the resulting profile
@@ -212,6 +213,7 @@ public final class InstanceService {
                 .authProvider(authProvider)
                 .javaRuntime(runtime)
                 .gameDirectory(gameDir)
+                .maxMemoryMb(instance.getMemoryMb())
                 .build();
 
         return minelib.getLauncher().launch(config);

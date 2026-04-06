@@ -20,18 +20,22 @@ import java.util.function.Consumer;
  *
  * <p>The card shows a coloured icon (derived from the version hash), the instance
  * name, Minecraft version, and mod loader badge.  A "▶ Play" button launches the
- * instance; a right-click context menu exposes rename / delete actions.
+ * instance; a right-click context menu exposes edit / open-folder / delete actions.
  */
 public final class InstanceCard extends VBox {
 
     /**
      * Creates an {@code InstanceCard}.
      *
-     * @param instance      the instance to display
-     * @param onPlay        callback invoked when the play button is clicked
-     * @param onDelete      callback invoked when "Delete" is chosen in the context menu
+     * @param instance       the instance to display
+     * @param onPlay         callback invoked when the play button is clicked
+     * @param onEdit         callback invoked when "Edit" is chosen in the context menu
+     * @param onOpenFolder   callback invoked when "Open Folder" is chosen
+     * @param onDelete       callback invoked when "Delete" is chosen in the context menu
      */
     public InstanceCard(Instance instance, Consumer<Instance> onPlay,
+                        Consumer<Instance> onEdit,
+                        Consumer<Instance> onOpenFolder,
                         Consumer<Instance> onDelete) {
         super(10);
         getStyleClass().add("instance-card");
@@ -82,10 +86,18 @@ public final class InstanceCard extends VBox {
 
         // ── Context menu ──────────────────────────────────────────────────────
         ContextMenu ctx = new ContextMenu();
+
+        MenuItem editItem = new MenuItem("✏  Edit");
+        editItem.setOnAction(e -> onEdit.accept(instance));
+
+        MenuItem openItem = new MenuItem("📂  Open Folder");
+        openItem.setOnAction(e -> onOpenFolder.accept(instance));
+
         MenuItem deleteItem = new MenuItem("🗑  Delete");
         deleteItem.setStyle("-fx-text-fill: #f78166;");
         deleteItem.setOnAction(e -> onDelete.accept(instance));
-        ctx.getItems().add(deleteItem);
+
+        ctx.getItems().addAll(editItem, openItem, deleteItem);
         setOnContextMenuRequested(e -> ctx.show(this, e.getScreenX(), e.getScreenY()));
     }
 

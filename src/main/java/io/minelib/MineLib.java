@@ -153,6 +153,21 @@ public class MineLib {
      * @throws Exception if any installation or launch step fails
      */
     public GameProcess installAndLaunch(String versionId, AuthProvider authProvider) throws Exception {
+        return installAndLaunch(versionId, authProvider, 2048);
+    }
+
+    /**
+     * Convenience method that downloads all files required to launch a given vanilla version
+     * and starts the game with the specified maximum heap size.
+     *
+     * @param versionId    the Minecraft version to install and launch (e.g. {@code "1.21"})
+     * @param authProvider an authenticated {@link AuthProvider} supplying the player's session
+     * @param maxMemoryMb  maximum JVM heap in megabytes (e.g. {@code 2048})
+     * @return a {@link GameProcess} handle to the running Minecraft instance
+     * @throws Exception if any installation or launch step fails
+     */
+    public GameProcess installAndLaunch(String versionId, AuthProvider authProvider,
+                                        int maxMemoryMb) throws Exception {
         LOGGER.info("Installing version {}", versionId);
         var version = versionManager.downloadVersion(versionId);
         assetManager.downloadAssets(version);
@@ -164,6 +179,7 @@ public class MineLib {
                 .authProvider(authProvider)
                 .javaRuntime(runtime)
                 .gameDirectory(gameDirectory)
+                .maxMemoryMb(maxMemoryMb)
                 .build();
 
         LOGGER.info("Launching Minecraft {}", versionId);

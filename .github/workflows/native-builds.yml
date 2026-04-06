@@ -213,6 +213,16 @@ jobs:
           java-version: '21'
           cache: gradle
 
+      # Download the FCL OpenJDK 17 multiarch bundle from nightly.link and place it
+      # in the APK assets folder so BundledJreExtractor can extract it on first run.
+      # JRE 17 (Build_JRE_17) is the last successfully-built branch in FCL-Team/Android-OpenJDK-Build.
+      - name: Download bundled FCL JRE 17 multiarch asset
+        run: |
+          mkdir -p launcher-android/src/main/assets/bundled-jre
+          curl -fsSL -o launcher-android/src/main/assets/bundled-jre/jre17-multiarch.zip \
+            "https://nightly.link/FCL-Team/Android-OpenJDK-Build/workflows/build.yml/Build_JRE_17/jre17-multiarch.zip"
+          echo "Bundled JRE asset size: $(du -sh launcher-android/src/main/assets/bundled-jre/jre17-multiarch.zip | cut -f1)"
+
       # ubuntu-latest ships Android SDK with compileSdk 34 + build-tools 34.0.0
       # pre-installed.  The -PandroidBuild=true flag activates the launcher-android
       # Gradle subproject (kept opt-in to avoid requiring the SDK for normal builds).
