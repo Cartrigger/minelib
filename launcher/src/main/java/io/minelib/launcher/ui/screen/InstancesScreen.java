@@ -23,7 +23,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 import java.awt.Desktop;
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 
 /**
@@ -285,11 +286,8 @@ public final class InstancesScreen extends BorderPane {
     private void openInstanceFolder(Instance instance) {
         java.nio.file.Path gameDir = instanceService.getGameDirectory(instance);
         try {
-            File dir = gameDir.toFile();
-            if (!dir.exists()) {
-                dir.mkdirs();
-            }
-            Desktop.getDesktop().open(dir);
+            Files.createDirectories(gameDir);
+            Desktop.getDesktop().open(gameDir.toFile());
         } catch (Exception ex) {
             new Alert(Alert.AlertType.ERROR,
                     "Cannot open folder: " + ex.getMessage()).showAndWait();

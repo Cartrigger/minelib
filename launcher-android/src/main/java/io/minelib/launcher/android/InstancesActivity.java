@@ -133,6 +133,7 @@ public final class InstancesActivity extends Activity {
     /**
      * Downloads and launches the given {@link Instance} using
      * {@link AndroidGameRunner} + MobileGlues.  Runs entirely on a background thread.
+     * Waits for the bundled JRE extraction to complete before starting the game.
      */
     void launchInstance(Instance instance) {
         Toast.makeText(this, R.string.launching, Toast.LENGTH_SHORT).show();
@@ -142,6 +143,9 @@ public final class InstancesActivity extends Activity {
 
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
+                // Block until the bundled JRE has been extracted (fast on subsequent runs)
+                LauncherApplication.get(this).getJreReady().get();
+
                 DownloadManager dm = new DownloadManager(4);
                 MobileGluesConfig mglConfig = MobileGluesConfig.builder()
                         .installDirectory(mglInstallDir)
