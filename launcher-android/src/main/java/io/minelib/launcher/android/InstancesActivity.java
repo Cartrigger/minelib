@@ -193,37 +193,41 @@ public final class InstancesActivity extends Activity {
             @Override public void onStopTrackingTouch(SeekBar sb) {}
         });
 
-        new AlertDialog.Builder(this)
+        android.app.AlertDialog editDialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.edit_instance)
                 .setView(dialogView)
-                .setPositiveButton(R.string.save, (d, w) -> {
-                    String name    = etName.getText().toString().trim();
-                    String version = etVersion.getText().toString().trim();
-                    if (name.isEmpty() || version.isEmpty()) {
-                        Toast.makeText(this, R.string.fields_required, Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    instance.setName(name);
-                    instance.setMinecraftVersion(version);
-                    instance.setModLoader(Instance.ModLoader.values()[spLoader.getSelectedItemPosition()]);
-                    instance.setMemoryMb(512 + sbMemory.getProgress() * 512);
-                    Executors.newSingleThreadExecutor().execute(() -> {
-                        try {
-                            instanceService.saveInstance(instance);
-                            runOnUiThread(() -> {
-                                adapter.notifyDataSetChanged();
-                                Toast.makeText(this, R.string.instance_saved, Toast.LENGTH_SHORT).show();
-                            });
-                        } catch (Exception e) {
-                            runOnUiThread(() ->
-                                    Toast.makeText(this,
-                                            getString(R.string.save_failed) + ": " + e.getMessage(),
-                                            Toast.LENGTH_LONG).show());
-                        }
-                    });
-                })
+                .setPositiveButton(R.string.save, null) // listener set below to prevent auto-dismiss
                 .setNegativeButton(R.string.cancel, null)
-                .show();
+                .create();
+        editDialog.show();
+        // Override positive-button listener so we can block dismiss on validation failure
+        editDialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String name    = etName.getText().toString().trim();
+            String version = etVersion.getText().toString().trim();
+            if (name.isEmpty() || version.isEmpty()) {
+                Toast.makeText(this, R.string.fields_required, Toast.LENGTH_SHORT).show();
+                return; // keep the dialog open
+            }
+            instance.setName(name);
+            instance.setMinecraftVersion(version);
+            instance.setModLoader(Instance.ModLoader.values()[spLoader.getSelectedItemPosition()]);
+            instance.setMemoryMb(512 + sbMemory.getProgress() * 512);
+            editDialog.dismiss();
+            Executors.newSingleThreadExecutor().execute(() -> {
+                try {
+                    instanceService.saveInstance(instance);
+                    runOnUiThread(() -> {
+                        adapter.notifyDataSetChanged();
+                        Toast.makeText(this, R.string.instance_saved, Toast.LENGTH_SHORT).show();
+                    });
+                } catch (Exception e) {
+                    runOnUiThread(() ->
+                            Toast.makeText(this,
+                                    getString(R.string.save_failed) + ": " + e.getMessage(),
+                                    Toast.LENGTH_LONG).show());
+                }
+            });
+        });
     }
 
     // ── Instance info ─────────────────────────────────────────────────────────

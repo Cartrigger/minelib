@@ -429,14 +429,19 @@ public final class BundledJreExtractor {
 
     /** Reliably skips exactly {@code count} bytes from {@code in}. */
     private static void skipFully(InputStream in, long count) throws IOException {
-        while (count > 0) {
-            long n = in.skip(count);
+        long remaining = count;
+        while (remaining > 0) {
+            long n = in.skip(remaining);
             if (n > 0) {
-                count -= n;
+                remaining -= n;
             } else {
-                // skip() may return 0 even when bytes are available; fall back to read()
-                if (in.read() < 0) return;
-                count--;
+                // skip() may return 0; fall back to read() to advance one byte
+                if (in.read() < 0) {
+                    Log.w(TAG, "Premature EOF while skipping TAR padding ("
+                            + remaining + " bytes unread of " + count + " expected)");
+                    return;
+                }
+                remaining--;
             }
         }
     }
