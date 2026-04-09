@@ -173,22 +173,23 @@ jobs:
         shell: pwsh
         run: |
           jpackage `
-            --input       launcher/build/jpackage-input `
-            --main-jar    launcher.jar `
-            --main-class  io.minelib.launcher.Main `
-            --name        MinelibLauncher `
-            --type        exe `
-            --add-modules "javafx.controls,javafx.graphics,javafx.fxml,javafx.base" `
-            --java-options "--add-modules=javafx.controls,javafx.graphics,javafx.fxml" `
-            --java-options "--add-opens=javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED" `
-            --java-options "--add-exports=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED" `
-            --app-version "${{ steps.ver.outputs.jpackage-version }}" `
-            --vendor      "Minelib" `
-            --description "Cross-platform Minecraft launcher" `
+            --input          launcher/build/jpackage-input `
+            --main-jar       launcher.jar `
+            --main-class     io.minelib.launcher.Main `
+            --name           MinelibLauncher `
+            --type           exe `
+            --add-modules    "javafx.controls,javafx.graphics,javafx.fxml,javafx.base" `
+            --java-options   "--add-modules=javafx.controls,javafx.graphics,javafx.fxml" `
+            --java-options   "--add-opens=javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED" `
+            --java-options   "--add-exports=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED" `
+            --app-version    "${{ steps.ver.outputs.jpackage-version }}" `
+            --vendor         "Minelib" `
+            --description    "Cross-platform Minecraft launcher" `
             --win-dir-chooser `
             --win-menu `
             --win-shortcut `
-            --dest        native-packages
+            --win-per-user-install `
+            --dest           native-packages
 
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
