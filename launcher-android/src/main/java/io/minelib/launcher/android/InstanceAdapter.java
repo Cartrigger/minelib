@@ -14,16 +14,22 @@ import java.util.function.Consumer;
 
 /**
  * {@link ArrayAdapter} that backs the instance {@link android.widget.ListView}.
- * Each row shows the instance name + Minecraft version and a "Play" button.
+ *
+ * <p>Each row shows the instance name and Minecraft version, a "▶ Play" button, and a
+ * "⋮" overflow button that delegates to an {@code onMenu} callback (typically shows an
+ * edit / info / delete popup dialog).
  */
 public final class InstanceAdapter extends ArrayAdapter<Instance> {
 
     private final Consumer<Instance> onPlay;
+    private final Consumer<Instance> onMenu;
 
     public InstanceAdapter(Context context, List<Instance> instances,
-                           Consumer<Instance> onPlay) {
+                           Consumer<Instance> onPlay,
+                           Consumer<Instance> onMenu) {
         super(context, 0, instances);
         this.onPlay = onPlay;
+        this.onMenu = onMenu;
     }
 
     @Override
@@ -45,6 +51,7 @@ public final class InstanceAdapter extends ArrayAdapter<Instance> {
                     "Minecraft " + inst.getMinecraftVersion()
                             + "  ·  " + inst.getModLoader().name());
             holder.btnPlay.setOnClickListener(v -> onPlay.accept(inst));
+            holder.btnMenu.setOnClickListener(v -> onMenu.accept(inst));
         }
         return convertView;
     }
@@ -53,11 +60,14 @@ public final class InstanceAdapter extends ArrayAdapter<Instance> {
         final TextView tvName;
         final TextView tvVersion;
         final Button   btnPlay;
+        final Button   btnMenu;
 
         ViewHolder(View root) {
             tvName    = root.findViewById(R.id.tv_instance_name);
             tvVersion = root.findViewById(R.id.tv_instance_version);
             btnPlay   = root.findViewById(R.id.btn_play);
+            btnMenu   = root.findViewById(R.id.btn_menu);
         }
     }
 }
+

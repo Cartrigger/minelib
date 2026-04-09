@@ -32,6 +32,12 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    // Prevent AAPT from trying to compress the bundled-jre ZIP (it is already
+    // compressed internally; double-compression would corrupt the ZipInputStream read).
+    aaptOptions {
+        noCompress 'zip', 'xz'
+    }
 }
 
 repositories {
@@ -45,6 +51,10 @@ dependencies {
     // Minelib library — LWJGL is compileOnly in the root project so it won't
     // appear on the Android compile classpath.
     implementation project(':')
+
+    // Pure-Java XZ decompressor — used by BundledJreExtractor to unpack .tar.xz
+    // archives from the bundled JRE assets without requiring the system 'tar' binary.
+    implementation 'org.tukaani:xz:1.10'
 
     // AndroidX / Material
     implementation 'androidx.appcompat:appcompat:1.7.0'

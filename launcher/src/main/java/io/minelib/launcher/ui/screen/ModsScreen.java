@@ -54,18 +54,25 @@ public final class ModsScreen extends BorderPane {
         tfSearch.setPromptText("Search mods…");
         tfSearch.setPrefWidth(260);
         tfSearch.getStyleClass().add("search-bar");
-        tfSearch.setOnAction(e -> doSearch(tfSearch.getText().trim()));
 
         ComboBox<String> cbVersion = new ComboBox<>();
         cbVersion.setPromptText("MC version");
+        cbVersion.setEditable(true);
         cbVersion.getItems().addAll("1.21.4", "1.21.1", "1.20.4", "1.20.1", "1.19.4");
         cbVersion.setPrefWidth(110);
 
         Button btnSearch = new Button("Search");
         btnSearch.getStyleClass().add("btn-primary");
         btnSearch.setOnAction(e -> {
-            String query = tfSearch.getText().trim();
-            if (!query.isEmpty()) doSearch(query);
+            String query   = tfSearch.getText().trim();
+            String version = cbVersion.getEditor().getText().trim();
+            if (!query.isEmpty()) doSearch(query, version.isEmpty() ? null : version);
+        });
+
+        tfSearch.setOnAction(e -> {
+            String query   = tfSearch.getText().trim();
+            String version = cbVersion.getEditor().getText().trim();
+            if (!query.isEmpty()) doSearch(query, version.isEmpty() ? null : version);
         });
 
         HBox spacer = new HBox();
@@ -95,7 +102,7 @@ public final class ModsScreen extends BorderPane {
 
     // ── Search ────────────────────────────────────────────────────────────────
 
-    private void doSearch(String query) {
+    private void doSearch(String query, String gameVersion) {
         resultsList.getChildren().clear();
         Label loading = new Label("Searching…");
         loading.getStyleClass().add("label-muted");
@@ -103,7 +110,7 @@ public final class ModsScreen extends BorderPane {
 
         new Thread(() -> {
             try {
-                List<ModrinthProject> results = modrinthClient.search(query, null, null, 20);
+                List<ModrinthProject> results = modrinthClient.search(query, gameVersion, null, 20);
                 Platform.runLater(() -> showResults(results));
             } catch (Exception ex) {
                 Platform.runLater(() -> {

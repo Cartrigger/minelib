@@ -25,30 +25,27 @@ class JavaRuntimeManagerFclTest {
     }
 
     @Test
-    void selectFclVersion17ForRequiredBelow17() throws IOException {
-        assertEquals(17, JavaRuntimeManager.selectFclVersion(8));
+    void selectFclVersion8ForRequired8() throws IOException {
+        // JRE 8 is now bundled; java 8 requirement should use FCL 8 directly.
+        assertEquals(8, JavaRuntimeManager.selectFclVersion(8));
+    }
+
+    @Test
+    void selectFclVersion17ForRequiredBetween9And16() throws IOException {
+        // Java 9–16 are not supported by FCL; the smallest available version >= them is 17.
         assertEquals(17, JavaRuntimeManager.selectFclVersion(11));
         assertEquals(17, JavaRuntimeManager.selectFclVersion(16));
     }
 
     @Test
-    void selectFclVersion21ForRequired21() throws IOException {
-        assertEquals(21, JavaRuntimeManager.selectFclVersion(21));
+    void selectFclVersion25ForRequired21() throws IOException {
+        assertEquals(25, JavaRuntimeManager.selectFclVersion(21));
     }
 
     @Test
-    void selectFclVersion21ForRequiredBetween17And21() throws IOException {
-        assertEquals(21, JavaRuntimeManager.selectFclVersion(18));
-        assertEquals(21, JavaRuntimeManager.selectFclVersion(20));
-    }
-
-    @Test
-    void selectFclVersion25ForRequired25() throws IOException {
-        assertEquals(25, JavaRuntimeManager.selectFclVersion(25));
-    }
-
-    @Test
-    void selectFclVersion25ForRequiredBetween21And25() throws IOException {
+    void selectFclVersion25ForRequiredBetween17And25() throws IOException {
+        assertEquals(25, JavaRuntimeManager.selectFclVersion(18));
+        assertEquals(25, JavaRuntimeManager.selectFclVersion(20));
         assertEquals(25, JavaRuntimeManager.selectFclVersion(22));
         assertEquals(25, JavaRuntimeManager.selectFclVersion(24));
     }

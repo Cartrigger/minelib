@@ -14,12 +14,17 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+import java.awt.Desktop;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 
 /**
@@ -42,7 +47,8 @@ public final class InstancesScreen extends BorderPane {
     private final AuthService     authService;
     private final InstanceService instanceService;
     private final Runnable        onOpenMods;
-    private final FlowPane        cardGrid = new FlowPane(12, 12);
+    private final FlowPane        cardGrid   = new FlowPane(12, 12);
+    private final Label           statusBar  = new Label();
 
     public InstancesScreen(AuthService authService, InstanceService instanceService,
                            Runnable onOpenMods) {
@@ -52,8 +58,14 @@ public final class InstancesScreen extends BorderPane {
 
         getStyleClass().add("instances-screen");
 
+        statusBar.getStyleClass().add("label-muted");
+        statusBar.setVisible(false);
+        statusBar.setManaged(false);
+
         setTop(buildToolbar());
         setCenter(buildCardArea());
+        setBottom(statusBar);
+        BorderPane.setMargin(statusBar, new Insets(4, 20, 8, 20));
         setPadding(new Insets(0, 0, 0, 0));
 
         loadInstances();
@@ -107,6 +119,8 @@ public final class InstancesScreen extends BorderPane {
         for (Instance inst : instances) {
             InstanceCard card = new InstanceCard(inst,
                     this::launchInstance,
+                    this::editInstance,
+                    this::openInstanceFolder,
                     this::deleteInstance);
             card.setPrefWidth(220);
             cardGrid.getChildren().add(card);
@@ -165,13 +179,20 @@ public final class InstancesScreen extends BorderPane {
     // ── Actions ───────────────────────────────────────────────────────────────
 
     private void launchInstance(Instance instance) {
+        statusBar.setText("⏳ Launching \"" + instance.getName() + "\" — downloading files if needed…");
+        statusBar.setVisible(true);
+        statusBar.setManaged(true);
+
         new Thread(() -> {
             try {
                 instanceService.launch(instance, authService.getProfile());
-                instance.markPlayed();
-                instanceService.saveInstance(instance);
+                Platform.runLater(() -> {
+                    statusBar.setText("✅ Launched \"" + instance.getName() + "\"");
+                    loadInstances();
+                });
             } catch (Exception ex) {
                 Platform.runLater(() -> {
+                    statusBar.setText("❌ Launch failed: " + ex.getMessage());
                     Alert err = new Alert(Alert.AlertType.ERROR,
                             "Launch failed: " + ex.getMessage());
                     err.showAndWait();
@@ -194,5 +215,82 @@ public final class InstancesScreen extends BorderPane {
                         "Could not delete: " + ex.getMessage()).showAndWait();
             }
         });
+    }
+
+    // ── Edit instance ─────────────────────────────────────────────────────────
+
+    private void editInstance(Instance instance) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Edit Instance — " + instance.getName());
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        TextField tfName    = new TextField(instance.getName());
+        tfName.getStyleClass().add("text-field");
+
+        TextField tfVersion = new TextField(instance.getMinecraftVersion());
+        tfVersion.getStyleClass().add("text-field");
+
+        ComboBox<Instance.ModLoader> cbLoader = new ComboBox<>();
+        cbLoader.getItems().addAll(Instance.ModLoader.values());
+        cbLoader.setValue(instance.getModLoader());
+        cbLoader.getStyleClass().add("combo-box");
+
+        Label memLabel = new Label("Memory: " + instance.getMemoryMb() + " MB");
+        Slider memSlider = new Slider(512, 8192, instance.getMemoryMb());
+        memSlider.setMajorTickUnit(1024);
+        memSlider.setMinorTickCount(3);
+        memSlider.setSnapToTicks(false);
+        memSlider.setBlockIncrement(256);
+        memSlider.valueProperty().addListener((obs, o, n) ->
+                memLabel.setText("Memory: " + n.intValue() + " MB"));
+
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(16));
+        grid.add(new Label("Instance name"),   0, 0); grid.add(tfName,    1, 0);
+        grid.add(new Label("Minecraft version"), 0, 1); grid.add(tfVersion, 1, 1);
+        grid.add(new Label("Mod loader"),      0, 2); grid.add(cbLoader,  1, 2);
+        grid.add(new Label("Max memory"),      0, 3); grid.add(memLabel,  1, 3);
+        grid.add(memSlider,                    0, 4, 2, 1);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.showAndWait().ifPresent(btn -> {
+            if (btn != ButtonType.OK) return;
+            String name    = tfName.getText().trim();
+            String version = tfVersion.getText().trim();
+            if (name.isEmpty() || version.isEmpty()) return;
+
+            instance.setName(name);
+            instance.setMinecraftVersion(version);
+            instance.setModLoader(cbLoader.getValue());
+            instance.setMemoryMb((int) memSlider.getValue());
+
+            new Thread(() -> {
+                try {
+                    instanceService.saveInstance(instance);
+                    Platform.runLater(this::loadInstances);
+                } catch (Exception ex) {
+                    Platform.runLater(() ->
+                            new Alert(Alert.AlertType.ERROR,
+                                    "Could not save instance: " + ex.getMessage())
+                                    .showAndWait());
+                }
+            }, "instance-save").start();
+        });
+    }
+
+    // ── Open folder ───────────────────────────────────────────────────────────
+
+    private void openInstanceFolder(Instance instance) {
+        java.nio.file.Path gameDir = instanceService.getGameDirectory(instance);
+        try {
+            Files.createDirectories(gameDir);
+            Desktop.getDesktop().open(gameDir.toFile());
+        } catch (Exception ex) {
+            new Alert(Alert.AlertType.ERROR,
+                    "Cannot open folder: " + ex.getMessage()).showAndWait();
+        }
     }
 }

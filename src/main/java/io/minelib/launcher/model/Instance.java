@@ -23,6 +23,8 @@ public final class Instance {
     private String minecraftVersion;
     private ModLoader modLoader;
     private long lastPlayedMs;
+    /** Maximum JVM heap in megabytes used when launching Minecraft (default 2048). */
+    private int memoryMb = 2048;
 
     public Instance(String id, String name, String minecraftVersion, ModLoader modLoader) {
         this.id = Objects.requireNonNull(id, "id");
@@ -58,6 +60,12 @@ public final class Instance {
 
     /** Updates the last-played timestamp to the current time. */
     public void markPlayed() { this.lastPlayedMs = System.currentTimeMillis(); }
+
+    /** Returns the maximum JVM heap size in megabytes for this instance (at least 512). */
+    public int getMemoryMb() { return memoryMb <= 0 ? 2048 : memoryMb; }
+
+    /** Sets the maximum JVM heap size in megabytes (clamped to minimum 512 MB). */
+    public void setMemoryMb(int mb) { this.memoryMb = Math.max(512, mb); }
 
     @Override
     public String toString() {
